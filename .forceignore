@@ -1,0 +1,18 @@
+# Local-only tooling that should never deploy
+**/jsconfig.json
+**/.eslintrc.json
+**/__tests__/**
+
+# LWC config files
+**/lwc/.eslintrc.json
+**/lwc/jsconfig.json
+
+# Jest mocks live inside the package dir but aren't deployable metadata
+force-app/test/**
+
+# Profiles are org-specific; the package ships permission sets instead
+**/profiles/**
+
+# Standard-object retrieval noise (we only ship the custom fields we add)
+**/objectTranslations/**
+package.xml

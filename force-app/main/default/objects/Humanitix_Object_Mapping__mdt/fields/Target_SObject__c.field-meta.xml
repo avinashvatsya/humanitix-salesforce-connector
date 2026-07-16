@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Target_SObject__c</fullName>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <label>Target SObject</label>
+    <inlineHelpText>API name of the object to write, e.g. Campaign, Contact, Humanitix_Event__c.</inlineHelpText>
+    <type>Text</type>
+    <length>255</length>
+    <required>false</required>
+</CustomField>

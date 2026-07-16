@@ -1,0 +1,61 @@
+name: Release Package
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli
+
+      - name: Authenticate Dev Hub
+        env:
+          DEVHUB_SFDX_URL: ${{ secrets.DEVHUB_SFDX_URL }}
+        run: |
+          printf '%s' "$DEVHUB_SFDX_URL" > ./devhub-auth.txt
+          sf org login sfdx-url --sfdx-url-file ./devhub-auth.txt --set-default-dev-hub --alias devhub
+          rm -f ./devhub-auth.txt
+
+      # Requires the package to already exist (maintainer runs `sf package create`
+      # once and commits packageAliases to sfdx-project.json).
+      - name: Create package version
+        id: create
+        run: |
+          sf package version create \
+            --package "Humanitix Salesforce Connector" \
+            --code-coverage \
+            --installation-key-bypass \
+            --wait 90 \
+            --target-dev-hub devhub \
+            --json > version.json
+          cat version.json
+          SUBSCRIBER_ID=$(node -e "console.log(require('./version.json').result.SubscriberPackageVersionId)")
+          echo "subscriberId=$SUBSCRIBER_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Install-test in a fresh scratch org
+        run: |
+          sf org create scratch --definition-file config/project-scratch-def.json --alias insttest --duration-days 1 --wait 10
+          sf package install --package ${{ steps.create.outputs.subscriberId }} --target-org insttest --wait 20 --no-prompt --publish-wait 20
+          sf org delete scratch --target-org insttest --no-prompt || true
+
+      - name: Promote package version
+        run: sf package version promote --package ${{ steps.create.outputs.subscriberId }} --no-prompt --target-dev-hub devhub
+
+      - name: Publish install URL
+        run: |
+          echo "### Package version published :rocket:" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Install URL:" >> "$GITHUB_STEP_SUMMARY"
+          echo "https://login.salesforce.com/packaging/installPackage.apexp?p0=${{ steps.create.outputs.subscriberId }}" >> "$GITHUB_STEP_SUMMARY"

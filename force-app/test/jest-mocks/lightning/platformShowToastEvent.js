@@ -1,0 +1,13 @@
+// Mock for lightning/platformShowToastEvent used by sfdx-lwc-jest
+export const ShowToastEventName = 'lightning__showtoast';
+
+export class ShowToastEvent extends CustomEvent {
+  constructor(config) {
+    super(ShowToastEventName, {
+      composed: true,
+      cancelable: true,
+      bubbles: true,
+      detail: config
+    });
+  }
+}

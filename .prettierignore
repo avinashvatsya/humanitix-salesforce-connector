@@ -1,0 +1,10 @@
+# Generated / vendored
+node_modules/
+.sfdx/
+.sf/
+.localdevserver/
+force-app-*.zip
+
+# Data & docs assets that shouldn't be reformatted
+**/staticresources/**
+scripts/humanitix-openapi.json

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Humanitix_Ticket__c</fullName>
+    <label>Humanitix Ticket</label>
+    <type>Lookup</type>
+    <referenceTo>Humanitix_Ticket__c</referenceTo>
+    <relationshipName>Ticket_Attributes</relationshipName>
+    <relationshipLabel>Ticket Attributes</relationshipLabel>
+    <required>false</required>
+    <deleteConstraint>SetNull</deleteConstraint>
+</CustomField>

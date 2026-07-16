@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Humanitix_Id__c</fullName>
+    <label>Humanitix Ticket Attribute Id</label>
+    <inlineHelpText>Humanitix identifier. Used as the idempotent upsert key.</inlineHelpText>
+    <type>Text</type>
+    <length>255</length>
+    <externalId>true</externalId>
+    <unique>true</unique>
+    <required>false</required>
+</CustomField>

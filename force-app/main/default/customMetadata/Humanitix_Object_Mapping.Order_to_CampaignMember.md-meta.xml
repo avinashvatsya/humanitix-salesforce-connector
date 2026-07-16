@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <label>Order to Campaign Member</label>
+    <protected>false</protected>
+    <values>
+        <field>Source_Resource__c</field>
+        <value xsi:type="xsd:string">Order</value>
+    </values>
+    <values>
+        <field>Target_SObject__c</field>
+        <value xsi:type="xsd:string">CampaignMember</value>
+    </values>
+    <values>
+        <field>Match_Strategy__c</field>
+        <value xsi:type="xsd:string">MatchByFields</value>
+    </values>
+    <values>
+        <field>Load_Order__c</field>
+        <value xsi:type="xsd:double">24.0</value>
+    </values>
+    <values>
+        <field>Is_Active__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>Match_Field_Set__c</field>
+        <value xsi:type="xsd:string">CampaignId,ContactId</value>
+    </values>
+    <values>
+        <field>Description__c</field>
+        <value xsi:type="xsd:string">Links the buyer Contact to the event's Campaign (one member per Contact+Campaign, respecting the platform's native unique key). Skipped when Campaign or Contact cannot be resolved (e.g. order without an email).</value>
+    </values>
+</CustomMetadata>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Ticket_Status_Filter__c</fullName>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <label>Ticket Status Filter</label>
+    <type>Text</type>
+    <length>40</length>
+    <required>false</required>
+</CustomField>

@@ -1,0 +1,26 @@
+{
+  "trailingComma": "none",
+  "overrides": [
+    {
+      "files": "*.{cls,trigger}",
+      "options": {
+        "apexInsertFinalNewline": true,
+        "printWidth": 120,
+        "tabWidth": 4
+      }
+    },
+    {
+      "files": "*.{html,cmp,page,component}",
+      "options": {
+        "parser": "html"
+      }
+    },
+    {
+      "files": "*.{xml,md,yml,yaml,json}",
+      "options": {
+        "tabWidth": 2
+      }
+    }
+  ],
+  "plugins": ["prettier-plugin-apex", "@prettier/plugin-xml"]
+}

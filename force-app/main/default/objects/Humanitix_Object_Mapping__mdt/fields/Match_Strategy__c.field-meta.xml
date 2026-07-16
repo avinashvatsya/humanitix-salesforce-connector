@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Match_Strategy__c</fullName>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <label>Match Strategy</label>
+    <type>Picklist</type>
+    <valueSet>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>ExternalId</fullName>
+                <default>true</default>
+                <label>ExternalId</label>
+            </value>
+            <value>
+                <fullName>MatchByFields</fullName>
+                <default>false</default>
+                <label>MatchByFields</label>
+            </value>
+            <value>
+                <fullName>MatchNoUpdate</fullName>
+                <default>false</default>
+                <label>MatchNoUpdate</label>
+            </value>
+            <value>
+                <fullName>AlwaysCreate</fullName>
+                <default>false</default>
+                <label>AlwaysCreate</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

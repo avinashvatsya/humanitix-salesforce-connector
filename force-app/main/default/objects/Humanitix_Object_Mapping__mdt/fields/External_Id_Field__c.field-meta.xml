@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>External_Id_Field__c</fullName>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <label>External Id Field</label>
+    <inlineHelpText>Upsert key field API name. Blank when Match Strategy is MatchByFields/AlwaysCreate.</inlineHelpText>
+    <type>Text</type>
+    <length>255</length>
+    <required>false</required>
+</CustomField>

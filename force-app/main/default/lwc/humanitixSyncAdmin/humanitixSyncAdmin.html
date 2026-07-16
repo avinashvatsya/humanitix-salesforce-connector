@@ -1,0 +1,44 @@
+<template>
+  <lightning-card title="Humanitix Sync" icon-name="standard:sync">
+    <lightning-button
+      slot="actions"
+      label="Refresh"
+      icon-name="utility:refresh"
+      onclick={handleRefresh}
+    ></lightning-button>
+
+    <div class="slds-p-horizontal_medium slds-p-bottom_small">
+      <template lwc:if={syncEnabled}>
+        <lightning-button
+          variant="brand"
+          label="Run Sync Now"
+          icon-name="utility:play"
+          onclick={handleRun}
+          disabled={runDisabled}
+        ></lightning-button>
+        <template lwc:if={isRunning}>
+          <lightning-spinner alternative-text="Starting sync" size="small"></lightning-spinner>
+        </template>
+      </template>
+      <template lwc:else>
+        <p class="slds-text-color_error">
+          Sync is disabled. Enable it in the Humanitix Sync Toggle custom setting.
+        </p>
+      </template>
+    </div>
+
+    <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+      <template lwc:if={hasRuns}>
+        <lightning-datatable
+          key-field="Id"
+          data={runs}
+          columns={columns}
+          hide-checkbox-column
+        ></lightning-datatable>
+      </template>
+      <template lwc:else>
+        <p class="slds-text-color_weak">No sync runs yet.</p>
+      </template>
+    </div>
+  </lightning-card>
+</template>

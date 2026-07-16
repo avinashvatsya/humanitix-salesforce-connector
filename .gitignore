@@ -1,0 +1,29 @@
+# Salesforce DX
+.sf/
+.sfdx/
+.localdevserver/
+deploy-options.json
+
+# Logs & auth
+*.log
+**/authFiles/**
+*.auth
+scratch-org-auth-url.txt
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log
+
+# Local API-key spike output
+scripts/.spike-output.json
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+
+# Build output
+force-app-*.zip

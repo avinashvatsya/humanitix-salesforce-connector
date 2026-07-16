@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Transform_Arg__c</fullName>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <label>Transform Arg</label>
+    <inlineHelpText>Optional argument. For Reference data type: '&lt;TargetObject&gt;.&lt;ExternalIdField&gt;'. For IsoToDateInTz: the timezone path. For Concat: the prefix path/literal. For StaticValue: the literal value.</inlineHelpText>
+    <type>Text</type>
+    <length>255</length>
+    <required>false</required>
+</CustomField>

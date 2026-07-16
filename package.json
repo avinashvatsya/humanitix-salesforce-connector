@@ -1,0 +1,38 @@
+{
+  "name": "humanitix-salesforce-connector",
+  "version": "1.0.0",
+  "description": "Open-source, read-only Salesforce connector for Humanitix (unlocked package, no namespace).",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "lint": "eslint force-app/main/default/lwc",
+    "test": "npm run test:unit",
+    "test:unit": "sfdx-lwc-jest",
+    "test:unit:watch": "sfdx-lwc-jest --watch",
+    "test:unit:coverage": "sfdx-lwc-jest --coverage",
+    "prettier": "prettier --write \"**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yml,yaml}\"",
+    "prettier:verify": "prettier --check \"**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yml,yaml}\"",
+    "postinstall": "husky install || true",
+    "precommit": "lint-staged"
+  },
+  "devDependencies": {
+    "@lwc/eslint-plugin-lwc": "^1.9.0",
+    "@prettier/plugin-xml": "^3.4.1",
+    "@salesforce/eslint-config-lwc": "^3.5.3",
+    "@salesforce/eslint-plugin-lightning": "^1.0.1",
+    "@salesforce/sfdx-lwc-jest": "^5.1.0",
+    "eslint": "^8.57.0",
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.3.3",
+    "prettier-plugin-apex": "^2.2.0"
+  },
+  "lint-staged": {
+    "**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yml,yaml}": [
+      "prettier --write"
+    ],
+    "**/lwc/**/*.js": [
+      "eslint"
+    ]
+  }
+}

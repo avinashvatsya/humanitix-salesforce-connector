@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Since_Mode__c</fullName>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <label>Since Mode</label>
+    <type>Picklist</type>
+    <valueSet>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Modified</fullName>
+                <default>true</default>
+                <label>Modified</label>
+            </value>
+            <value>
+                <fullName>FullPull</fullName>
+                <default>false</default>
+                <label>FullPull</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>
