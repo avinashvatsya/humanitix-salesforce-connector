@@ -167,4 +167,27 @@ private class HumanitixMappingEngineTest {
         Test.stopTest();
         System.assertEquals(0, r.recordsProcessed);
     }
+
+    @IsTest
+    static void validateRejectsUnknownUpdateMode() {
+        HumanitixMappingConfig cfg = new HumanitixMappingConfig();
+        HumanitixMappingConfig.ObjectMapping m = new HumanitixMappingConfig.ObjectMapping();
+        m.devName = 'Bad_Mode_Mapping';
+        m.sourceResource = 'Tag';
+        m.targetSObject = 'Humanitix_Tag__c';
+        m.externalIdField = 'Humanitix_Id__c';
+        m.matchStrategy = 'ExternalId';
+        m.loadOrder = 1;
+        m.active = true;
+        m.updateMode = 'Sometimes';
+        cfg.objectMappings.add(m);
+        List<String> errors = cfg.validate();
+        Boolean found = false;
+        for (String e : errors) {
+            if (e.contains('unknown Update Mode "Sometimes"')) {
+                found = true;
+            }
+        }
+        System.assert(found, 'validate() must flag an unknown Update Mode; got: ' + errors);
+    }
 }

@@ -7,12 +7,14 @@
  * record), so a page never trips "Duplicate external id specified" or a native
  * unique constraint.
  *
- * Strategies:
- *   ExternalId    - Database.upsert on the external id field (skip blank keys).
- *   MatchNoUpdate - insert only rows whose external id isn't already present.
- *   MatchByFields - match existing by a field set (e.g. CampaignId+ContactId),
- *                   update matches / insert the rest. Respects native unique keys.
- *   AlwaysCreate  - insert everything.
+ * Strategy × Update Mode matrix (Update_Mode__c applies to matched/existing rows):
+ *   ExternalId    - Always: Database.upsert on the external id (skip blank keys).
+ *                   BlanksOnly: pre-query existing; fill only blank fields; insert new.
+ *                   Never: insert only keys not already present.
+ *   MatchByFields - match existing by a field set (e.g. CampaignId+ContactId);
+ *                   Always: update matches / BlanksOnly: fill blanks / Never: skip
+ *                   matches. Unmatched rows always insert. Respects native unique keys.
+ *   AlwaysCreate  - insert everything (Update Mode ignored).
  */
 public with sharing class HumanitixPersister {
     private static final Integer MAX_ERRORS = 20;
@@ -32,10 +34,13 @@ public with sharing class HumanitixPersister {
         String strat = String.isBlank(om.matchStrategy) ? 'ExternalId' : om.matchStrategy;
         switch on strat {
             when 'ExternalId' {
-                upsertByExternalId(om, records, r);
-            }
-            when 'MatchNoUpdate' {
-                matchNoUpdate(om, records, r);
+                if (om.updateMode == 'Never') {
+                    insertIfAbsentByExternalId(om, records, r);
+                } else if (om.updateMode == 'BlanksOnly') {
+                    externalIdBlanksOnly(om, records, r);
+                } else {
+                    upsertByExternalId(om, records, r);
+                }
             }
             when 'MatchByFields' {
                 matchByFields(om, records, r);
@@ -90,14 +95,14 @@ public with sharing class HumanitixPersister {
         tallyUpsert(Database.upsert(clean, extf, false), r);
     }
 
-    private static void matchNoUpdate(
+    private static void insertIfAbsentByExternalId(
         HumanitixMappingConfig.ObjectMapping om,
         List<SObject> records,
         PersistResult r
     ) {
         if (String.isBlank(om.externalIdField)) {
             throw new HumanitixMappingException(
-                'Object Mapping "' + om.devName + '" uses MatchNoUpdate but defines no External Id Field.'
+                'Object Mapping "' + om.devName + '" uses Update Mode "Never" but defines no External Id Field.'
             );
         }
         Map<String, SObject> byKey = new Map<String, SObject>();
@@ -132,6 +137,66 @@ public with sharing class HumanitixPersister {
                 toInsert.add(byKey.get(k));
             }
         }
+        insertNew(toInsert, r);
+    }
+
+    private static void externalIdBlanksOnly(
+        HumanitixMappingConfig.ObjectMapping om,
+        List<SObject> records,
+        PersistResult r
+    ) {
+        if (String.isBlank(om.externalIdField)) {
+            throw new HumanitixMappingException(
+                'Object Mapping "' + om.devName + '" uses Update Mode "BlanksOnly" but defines no External Id Field.'
+            );
+        }
+        Map<String, SObject> byKey = new Map<String, SObject>();
+        Set<String> keys = new Set<String>();
+        for (SObject s : records) {
+            Object v = s.get(om.externalIdField);
+            if (isBlankValue(v)) {
+                r.skipped++;
+                continue;
+            }
+            String k = foldKey(v);
+            if (byKey.containsKey(k)) {
+                r.skipped++;
+            }
+            byKey.put(k, s);
+            keys.add(String.valueOf(v));
+        }
+        if (byKey.isEmpty()) {
+            return;
+        }
+        String fld = HumanitixMappingConfig.safeIdentifier(om.externalIdField);
+        String obj = HumanitixMappingConfig.safeIdentifier(om.targetSObject);
+        List<String> selectFields = new List<String>{ 'Id', fld };
+        addPopulatedFields(selectFields, byKey.values());
+        String soql = 'SELECT ' + String.join(selectFields, ', ') + ' FROM ' + obj + ' WHERE ' + fld + ' IN :keys';
+        Map<String, SObject> existingByKey = new Map<String, SObject>();
+        for (SObject e : Database.query(soql, AccessLevel.SYSTEM_MODE)) {
+            Object k = e.get(om.externalIdField);
+            if (k != null) {
+                existingByKey.put(foldKey(k), e);
+            }
+        }
+        List<SObject> toInsert = new List<SObject>();
+        List<SObject> toUpdate = new List<SObject>();
+        for (String k : byKey.keySet()) {
+            SObject s = byKey.get(k);
+            SObject existing = existingByKey.get(k);
+            if (existing != null) {
+                SObject upd = blanksOnlyUpdate(s, existing);
+                if (upd == null) {
+                    r.processed++; // matched; nothing blank to fill — leave intact
+                } else {
+                    toUpdate.add(upd);
+                }
+            } else {
+                toInsert.add(s);
+            }
+        }
+        updateExisting(toUpdate, r);
         insertNew(toInsert, r);
     }
 
@@ -187,27 +252,80 @@ public with sharing class HumanitixPersister {
             binds.put(bindName, vals);
             i++;
         }
+        if (om.updateMode == 'BlanksOnly') {
+            // Blanks-only updates compare against current values, so query every
+            // field the built records populate.
+            addPopulatedFields(selectFields, byKey.values());
+        }
         String soql =
             'SELECT ' + String.join(selectFields, ', ') +
             ' FROM ' + HumanitixMappingConfig.safeIdentifier(om.targetSObject) +
             ' WHERE ' + String.join(whereParts, ' AND ');
-        Map<String, Id> idByKey = new Map<String, Id>();
+        Map<String, SObject> existingByKey = new Map<String, SObject>();
         for (SObject e : Database.queryWithBinds(soql, binds, AccessLevel.SYSTEM_MODE)) {
-            idByKey.put(keyOf(e, om.matchFields), (Id) e.get('Id'));
+            existingByKey.put(keyOf(e, om.matchFields), e);
         }
         List<SObject> toInsert = new List<SObject>();
         List<SObject> toUpdate = new List<SObject>();
         for (SObject s : byKey.values()) {
-            Id existingId = idByKey.get(keyOf(s, om.matchFields));
-            if (existingId != null) {
-                s.put('Id', existingId);
-                toUpdate.add(s);
+            SObject existing = existingByKey.get(keyOf(s, om.matchFields));
+            if (existing != null) {
+                if (om.updateMode == 'Never') {
+                    r.skipped++; // matched — existing record left untouched
+                } else if (om.updateMode == 'BlanksOnly') {
+                    SObject upd = blanksOnlyUpdate(s, existing);
+                    if (upd == null) {
+                        r.processed++; // matched; nothing blank to fill — leave intact
+                    } else {
+                        toUpdate.add(upd);
+                    }
+                } else {
+                    s.put('Id', existing.Id);
+                    toUpdate.add(s);
+                }
             } else {
                 toInsert.add(s);
             }
         }
         updateExisting(toUpdate, r);
         insertNew(toInsert, r);
+    }
+
+    /**
+     * Update payload for Update Blanks Only: Id plus only the source-populated
+     * fields whose value on the existing record is blank. Returns null when the
+     * match needs no write at all (everything already filled).
+     */
+    private static SObject blanksOnlyUpdate(SObject built, SObject existing) {
+        SObject upd = built.getSObjectType().newSObject(existing.Id);
+        Boolean hasWrites = false;
+        for (String f : built.getPopulatedFieldsAsMap().keySet()) {
+            if (f == 'Id') {
+                continue;
+            }
+            if (existing.get(f) == null && built.get(f) != null) {
+                upd.put(f, built.get(f));
+                hasWrites = true;
+            }
+        }
+        return hasWrites ? upd : null;
+    }
+
+    /** Widens a SELECT field list with every field the built records populate. */
+    private static void addPopulatedFields(List<String> selectFields, List<SObject> built) {
+        Set<String> seen = new Set<String>();
+        for (String sel : selectFields) {
+            seen.add(sel.toLowerCase());
+        }
+        for (SObject s : built) {
+            for (String f : s.getPopulatedFieldsAsMap().keySet()) {
+                String safe = HumanitixMappingConfig.safeIdentifier(f);
+                if (!seen.contains(safe.toLowerCase())) {
+                    seen.add(safe.toLowerCase());
+                    selectFields.add(safe);
+                }
+            }
+        }
     }
 
     private static void insertNew(List<SObject> records, PersistResult r) {

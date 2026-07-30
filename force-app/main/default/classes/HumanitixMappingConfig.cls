@@ -12,7 +12,8 @@ public with sharing class HumanitixMappingConfig {
         public String targetSObject;
         public String externalIdField;
         public String matchStrategy;
-        public List<String> matchFields;
+        public List<String> matchFields = new List<String>();
+        public String updateMode = 'Always';
         public String collectionPath;
         public Decimal loadOrder;
         public Boolean active;
@@ -40,6 +41,7 @@ public with sharing class HumanitixMappingConfig {
 
     private static HumanitixMappingConfig instance;
     private static Map<String, Schema.SObjectType> globalDescribeCache;
+    private static final Set<String> VALID_UPDATE_MODES = new Set<String>{ 'Always', 'BlanksOnly', 'Never' };
 
     /** Cached global describe — avoids re-materializing describes per mapping/DML. */
     public static Map<String, Schema.SObjectType> globalDescribe() {
@@ -88,7 +90,7 @@ public with sharing class HumanitixMappingConfig {
         for (Humanitix_Object_Mapping__mdt om : [
             SELECT DeveloperName, Source_Resource__c, Source_Collection_Path__c, Target_SObject__c,
                 External_Id_Field__c, Match_Strategy__c, Match_Field_Set__c,
-                Load_Order__c, Is_Active__c
+                Load_Order__c, Is_Active__c, Update_Mode__c
             FROM Humanitix_Object_Mapping__mdt
         ]) {
             ObjectMapping m = new ObjectMapping();
@@ -99,6 +101,7 @@ public with sharing class HumanitixMappingConfig {
             m.externalIdField = om.External_Id_Field__c;
             m.matchStrategy = String.isBlank(om.Match_Strategy__c) ? 'ExternalId' : om.Match_Strategy__c;
             m.matchFields = splitCsv(om.Match_Field_Set__c);
+            m.updateMode = String.isBlank(om.Update_Mode__c) ? 'Always' : om.Update_Mode__c;
             m.loadOrder = om.Load_Order__c == null ? 100 : om.Load_Order__c;
             m.active = om.Is_Active__c == true;
             byName.put(m.devName, m);
@@ -181,12 +184,15 @@ public with sharing class HumanitixMappingConfig {
             Map<String, Schema.SObjectField> flds = st.getDescribe().fields.getMap();
 
             // strategy prerequisites (fail fast before any DML)
-            Boolean usesExtId = m.matchStrategy == 'ExternalId' || m.matchStrategy == 'MatchNoUpdate';
+            Boolean usesExtId = m.matchStrategy == 'ExternalId';
             if (usesExtId && String.isBlank(m.externalIdField)) {
                 errors.add('Object Mapping "' + m.devName + '": strategy ' + m.matchStrategy + ' requires an External Id Field.');
             }
             if (m.matchStrategy == 'MatchByFields' && m.matchFields.isEmpty()) {
                 errors.add('Object Mapping "' + m.devName + '": strategy MatchByFields requires a Match Field Set.');
+            }
+            if (!VALID_UPDATE_MODES.contains(m.updateMode)) {
+                errors.add('Object Mapping "' + m.devName + '": unknown Update Mode "' + m.updateMode + '" (use Always, BlanksOnly or Never).');
             }
             if (String.isNotBlank(m.externalIdField) && !flds.containsKey(m.externalIdField.toLowerCase())) {
                 errors.add('Object Mapping "' + m.devName + '": unknown external id field "' + m.externalIdField + '".');
