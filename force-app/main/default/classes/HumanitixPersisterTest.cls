@@ -36,9 +36,11 @@ private class HumanitixPersisterTest {
     @IsTest
     static void alwaysCreateInsertsEverything() {
         System.runAs(HumanitixTestDataFactory.marketingAdmin()) {
+            HumanitixMappingConfig.ObjectMapping om = tagMapping('AlwaysCreate');
+            om.updateMode = 'Never'; // AlwaysCreate must ignore Update Mode entirely
             Test.startTest();
             HumanitixPersister.PersistResult r = HumanitixPersister.persist(
-                tagMapping('AlwaysCreate'),
+                om,
                 new List<SObject>{ tag('t1'), tag('t2') }
             );
             Test.stopTest();
@@ -66,6 +68,7 @@ private class HumanitixPersisterTest {
             System.assertEquals(1, r.processed, 'only the new key inserts');
             System.assertEquals(2, r.skipped, 'existing (case-insensitive) and blank key skip');
             System.assertEquals(2, [SELECT COUNT() FROM Humanitix_Tag__c]);
+            System.assertEquals(1, [SELECT COUNT() FROM Humanitix_Tag__c WHERE Name = 'EXISTING'], 'matched record is not modified');
         }
     }
 
@@ -199,6 +202,7 @@ private class HumanitixPersisterTest {
             System.assertEquals(251, r.processed, 'all rows process: 100 blank-fills + 151 inserts');
             System.assertEquals(0, r.failed);
             System.assertEquals(251, [SELECT COUNT() FROM Humanitix_Tag__c]);
+            System.assertEquals(251, [SELECT COUNT() FROM Humanitix_Tag__c WHERE User_Id__c != null], 'blank User_Id__c was filled on all matched rows');
             System.assertEquals('seed-0',
                 [SELECT Name FROM Humanitix_Tag__c WHERE Humanitix_Id__c = 'bulk-0'].Name,
                 'existing names preserved at bulk scale');
@@ -236,6 +240,15 @@ private class HumanitixPersisterTest {
         noExtNever.updateMode = 'Never';
         try {
             HumanitixPersister.persist(noExtNever, new List<SObject>{ tag('t') });
+            System.assert(false, 'expected HumanitixMappingException');
+        } catch (HumanitixMappingException e) {
+            System.assert(e.getMessage().contains('External Id Field'));
+        }
+        HumanitixMappingConfig.ObjectMapping noExtBlanksOnly = tagMapping('ExternalId');
+        noExtBlanksOnly.externalIdField = null;
+        noExtBlanksOnly.updateMode = 'BlanksOnly';
+        try {
+            HumanitixPersister.persist(noExtBlanksOnly, new List<SObject>{ tag('t') });
             System.assert(false, 'expected HumanitixMappingException');
         } catch (HumanitixMappingException e) {
             System.assert(e.getMessage().contains('External Id Field'));

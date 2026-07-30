@@ -34,6 +34,7 @@ public with sharing class HumanitixPersister {
         String strat = String.isBlank(om.matchStrategy) ? 'ExternalId' : om.matchStrategy;
         switch on strat {
             when 'ExternalId' {
+                requireWritableExternalId(om);
                 if (om.updateMode == 'Never') {
                     insertIfAbsentByExternalId(om, records, r);
                 } else if (om.updateMode == 'BlanksOnly') {
@@ -60,20 +61,7 @@ public with sharing class HumanitixPersister {
         List<SObject> records,
         PersistResult r
     ) {
-        if (String.isBlank(om.externalIdField)) {
-            throw new HumanitixMappingException(
-                'Object Mapping "' + om.devName + '" uses ExternalId but defines no External Id Field.'
-            );
-        }
         Schema.SObjectField extf = fieldToken(om.targetSObject, om.externalIdField);
-        Schema.DescribeFieldResult dfr = extf.getDescribe();
-        if (!dfr.isCreateable() || !dfr.isUpdateable()) {
-            throw new HumanitixMappingException(
-                'Running user lacks create/update access to the external id field ' +
-                om.targetSObject + '.' + om.externalIdField +
-                ' — cannot upsert. Assign the Humanitix Integration Admin permission set.'
-            );
-        }
         // Collapse in-page duplicates so a repeated key can't trip DUPLICATE_EXTERNAL_ID.
         Map<String, SObject> byKey = new Map<String, SObject>();
         for (SObject s : records) {
@@ -100,11 +88,6 @@ public with sharing class HumanitixPersister {
         List<SObject> records,
         PersistResult r
     ) {
-        if (String.isBlank(om.externalIdField)) {
-            throw new HumanitixMappingException(
-                'Object Mapping "' + om.devName + '" uses Update Mode "Never" but defines no External Id Field.'
-            );
-        }
         Map<String, SObject> byKey = new Map<String, SObject>();
         Set<String> keys = new Set<String>();
         for (SObject s : records) {
@@ -112,7 +95,11 @@ public with sharing class HumanitixPersister {
             if (isBlankValue(v)) {
                 r.skipped++;
             } else {
-                byKey.put(foldKey(v), s); // case-fold so it matches case-insensitive SOQL
+                String k = foldKey(v);
+                if (byKey.containsKey(k)) {
+                    r.skipped++;
+                }
+                byKey.put(k, s); // case-fold so it matches case-insensitive SOQL
                 keys.add(String.valueOf(v));
             }
         }
@@ -145,11 +132,6 @@ public with sharing class HumanitixPersister {
         List<SObject> records,
         PersistResult r
     ) {
-        if (String.isBlank(om.externalIdField)) {
-            throw new HumanitixMappingException(
-                'Object Mapping "' + om.devName + '" uses Update Mode "BlanksOnly" but defines no External Id Field.'
-            );
-        }
         Map<String, SObject> byKey = new Map<String, SObject>();
         Set<String> keys = new Set<String>();
         for (SObject s : records) {
@@ -345,6 +327,28 @@ public with sharing class HumanitixPersister {
     }
 
     // ---- helpers ----------------------------------------------------------
+
+    /**
+     * Guards the ExternalId strategy before any mode-specific routing: the field
+     * must be configured, and the running user must be able to create/update it,
+     * or every mode downstream would silently strip the key and insert null-key
+     * rows via Security.stripInaccessible.
+     */
+    private static void requireWritableExternalId(HumanitixMappingConfig.ObjectMapping om) {
+        if (String.isBlank(om.externalIdField)) {
+            throw new HumanitixMappingException(
+                'Object Mapping "' + om.devName + '" uses the ExternalId strategy but defines no External Id Field.'
+            );
+        }
+        Schema.DescribeFieldResult dfr = fieldToken(om.targetSObject, om.externalIdField).getDescribe();
+        if (!dfr.isCreateable() || !dfr.isUpdateable()) {
+            throw new HumanitixMappingException(
+                'Running user lacks create/update access to the external id field ' +
+                om.targetSObject + '.' + om.externalIdField +
+                ' — cannot sync. Assign the Humanitix Integration Admin permission set.'
+            );
+        }
+    }
 
     private static Schema.SObjectField fieldToken(String sobjectName, String fieldName) {
         Schema.SObjectType st = HumanitixMappingConfig.globalDescribe().get(sobjectName);

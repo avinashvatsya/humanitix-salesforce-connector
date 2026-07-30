@@ -66,11 +66,11 @@ record that already exists in Salesforce:
 
 Unmatched/new records are always inserted in full, whatever the mode.
 
-**Interaction with field-level `Overwrite Blank`:** `Overwrite Blank` on a Field
+**Interaction with field-level `Overwrite With Blank`:** `Overwrite With Blank` on a Field
 Mapping decides whether a *blank source value* may clear a populated target
 field, and only applies when the mode allows the field to be written at all
 (`Always`). Under `BlanksOnly`, populated target fields are never written,
-so `Overwrite Blank` has no effect; under `Never`, nothing on a matched record
+so `Overwrite With Blank` has no effect; under `Never`, nothing on a matched record
 is written.
 
 **Interaction with duplicate rules:** `AlwaysCreate` in an org whose duplicate

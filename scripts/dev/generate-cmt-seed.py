@@ -5,8 +5,10 @@ gack (UNKNOWN_EXCEPTION) on CustomMetadata record deploys.
 
 Each generated .apex file builds Metadata.CustomMetadata items and enqueues one
 Metadata.Operations deployment. Records that other records reference (anything
-that is not a Humanitix_Field_Mapping) land in chunk 00 and must finish
-deploying before the field-mapping chunks run.
+that is not a Humanitix_Field_Mapping) land in chunk 00 and should be run
+first — but Metadata.Operations deployments are asynchronous, so enqueueing
+chunk 00 does not mean it has finished: poll the record counts between phases
+(see below) before relying on the parent/child relationships being resolvable.
 
 Usage:
     python3 scripts/dev/generate-cmt-seed.py OUT_DIR
