@@ -50,7 +50,9 @@ public with sharing class HumanitixPersister {
                 insertNew(records, r);
             }
             when else {
-                upsertByExternalId(om, records, r);
+                throw new HumanitixMappingException(
+                    'Object Mapping "' + om.devName + '" has unknown Match Strategy "' + strat + '".'
+                );
             }
         }
         return r;
@@ -70,7 +72,7 @@ public with sharing class HumanitixPersister {
                 r.skipped++;
                 continue;
             }
-            String k = String.valueOf(v);
+            String k = foldKey(v);
             if (byKey.containsKey(k)) {
                 r.skipped++;
             }
@@ -83,26 +85,45 @@ public with sharing class HumanitixPersister {
         tallyUpsert(Database.upsert(clean, extf, false), r);
     }
 
+    /**
+     * Collapses records into a Map keyed by folded external-id value (so a
+     * repeated key can't trip a duplicate insert/update), skipping blank keys
+     * and tallying an in-page duplicate for every key already seen. Also fills
+     * rawKeysOut with every non-blank raw value seen, for the caller's own
+     * pre-query IN-clause bind. Shared by insertIfAbsentByExternalId and
+     * externalIdBlanksOnly, which each run their own SELECT — with only the
+     * fields they need — against the resulting key set.
+     */
+    private static Map<String, SObject> collapseByExternalId(
+        String externalIdField,
+        List<SObject> records,
+        PersistResult r,
+        Set<String> rawKeysOut
+    ) {
+        Map<String, SObject> byKey = new Map<String, SObject>();
+        for (SObject s : records) {
+            Object v = s.get(externalIdField);
+            if (isBlankValue(v)) {
+                r.skipped++;
+                continue;
+            }
+            String k = foldKey(v);
+            if (byKey.containsKey(k)) {
+                r.skipped++;
+            }
+            byKey.put(k, s); // case-fold so it matches case-insensitive SOQL
+            rawKeysOut.add(String.valueOf(v));
+        }
+        return byKey;
+    }
+
     private static void insertIfAbsentByExternalId(
         HumanitixMappingConfig.ObjectMapping om,
         List<SObject> records,
         PersistResult r
     ) {
-        Map<String, SObject> byKey = new Map<String, SObject>();
         Set<String> keys = new Set<String>();
-        for (SObject s : records) {
-            Object v = s.get(om.externalIdField);
-            if (isBlankValue(v)) {
-                r.skipped++;
-            } else {
-                String k = foldKey(v);
-                if (byKey.containsKey(k)) {
-                    r.skipped++;
-                }
-                byKey.put(k, s); // case-fold so it matches case-insensitive SOQL
-                keys.add(String.valueOf(v));
-            }
-        }
+        Map<String, SObject> byKey = collapseByExternalId(om.externalIdField, records, r, keys);
         if (byKey.isEmpty()) {
             return;
         }
@@ -132,21 +153,8 @@ public with sharing class HumanitixPersister {
         List<SObject> records,
         PersistResult r
     ) {
-        Map<String, SObject> byKey = new Map<String, SObject>();
         Set<String> keys = new Set<String>();
-        for (SObject s : records) {
-            Object v = s.get(om.externalIdField);
-            if (isBlankValue(v)) {
-                r.skipped++;
-                continue;
-            }
-            String k = foldKey(v);
-            if (byKey.containsKey(k)) {
-                r.skipped++;
-            }
-            byKey.put(k, s);
-            keys.add(String.valueOf(v));
-        }
+        Map<String, SObject> byKey = collapseByExternalId(om.externalIdField, records, r, keys);
         if (byKey.isEmpty()) {
             return;
         }

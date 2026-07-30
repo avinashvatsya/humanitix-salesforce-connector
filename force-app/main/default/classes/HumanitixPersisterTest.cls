@@ -50,6 +50,23 @@ private class HumanitixPersisterTest {
     }
 
     @IsTest
+    static void upsertByExternalIdCollapsesCaseInsensitiveDuplicate() {
+        System.runAs(HumanitixTestDataFactory.marketingAdmin()) {
+            HumanitixMappingConfig.ObjectMapping om = tagMapping('ExternalId');
+            om.updateMode = 'Always';
+            Test.startTest();
+            HumanitixPersister.PersistResult r = HumanitixPersister.persist(
+                om,
+                new List<SObject>{ tag('dup'), tag('DUP') }
+            );
+            Test.stopTest();
+            System.assertEquals(1, r.processed, 'the surviving case-fold row upserts');
+            System.assertEquals(1, r.skipped, 'the case-insensitive duplicate collapses before DML');
+            System.assertEquals(1, [SELECT COUNT() FROM Humanitix_Tag__c]);
+        }
+    }
+
+    @IsTest
     static void externalIdNeverSkipsExistingAndBlankInsertsNew() {
         System.runAs(HumanitixTestDataFactory.marketingAdmin()) {
             insert tag('EXISTING');
@@ -151,6 +168,28 @@ private class HumanitixPersisterTest {
             System.assertEquals('full', k3.Name);
             System.assertEquals('set', k3.User_Id__c);
             System.assertEquals(3, [SELECT COUNT() FROM Humanitix_Tag__c]);
+        }
+    }
+
+    @IsTest
+    static void externalIdBlanksOnlySkipsBlankAndCollapsesCaseDuplicate() {
+        System.runAs(HumanitixTestDataFactory.marketingAdmin()) {
+            HumanitixMappingConfig.ObjectMapping om = tagMapping('ExternalId');
+            om.updateMode = 'BlanksOnly';
+            Test.startTest();
+            HumanitixPersister.PersistResult r = HumanitixPersister.persist(
+                om,
+                new List<SObject>{
+                    new Humanitix_Tag__c(Name = 'blank'), // no key -> skipped
+                    tag('dup'), // same key, different case -> collapse-skip
+                    tag('DUP'),
+                    tag('newkey') // normal new row -> inserts
+                }
+            );
+            Test.stopTest();
+            System.assertEquals(2, r.processed, 'surviving case-fold row + normal new row both insert');
+            System.assertEquals(2, r.skipped, 'blank key and case-insensitive duplicate both skip');
+            System.assertEquals(2, [SELECT COUNT() FROM Humanitix_Tag__c]);
         }
     }
 
@@ -259,6 +298,17 @@ private class HumanitixPersisterTest {
             System.assert(false, 'expected HumanitixMappingException');
         } catch (HumanitixMappingException e) {
             System.assert(e.getMessage().contains('Match Field Set'));
+        }
+    }
+
+    @IsTest
+    static void unknownMatchStrategyThrowsClearError() {
+        HumanitixMappingConfig.ObjectMapping om = tagMapping('Bogus');
+        try {
+            HumanitixPersister.persist(om, new List<SObject>{ tag('t') });
+            System.assert(false, 'expected HumanitixMappingException');
+        } catch (HumanitixMappingException e) {
+            System.assert(e.getMessage().contains('unknown Match Strategy "Bogus"'));
         }
     }
 }
