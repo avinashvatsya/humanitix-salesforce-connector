@@ -70,7 +70,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Quick start:
 
 ```bash
 npm install
-sf org create scratch -f config/project-scratch-def.json -a htx-dev -d 7
+sf org create scratch -f config/project-scratch-def.json -a htx-dev --duration-days 7
 sf project deploy start -o htx-dev
 sf org assign permset -n Humanitix_Integration_Admin -o htx-dev
 sf apex run test -o htx-dev -l RunLocalTests -c -r human

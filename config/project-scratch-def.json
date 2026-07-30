@@ -1,6 +1,6 @@
 {
   "orgName": "Humanitix Salesforce Connector",
-  "edition": "Developer",
+  "edition": "developer",
   "features": ["EnableSetPasswordInApi"],
   "settings": {
     "lightningExperienceSettings": {

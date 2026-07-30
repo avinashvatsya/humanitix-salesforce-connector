@@ -42,7 +42,7 @@ sf package version create \
 git add sfdx-project.json && git commit -m "chore: package version" && git push
 
 # 2. Install-test the beta in a throwaway scratch org
-sf org create scratch -f config/project-scratch-def.json -a insttest -d 1 -w 10
+sf org create scratch -f config/project-scratch-def.json -a insttest --duration-days 1 -w 10
 sf package install --package 04t... --target-org insttest --wait 20 --no-prompt
 sf apex run test -o insttest -l RunLocalTests -c -r human
 sf org delete scratch -o insttest --no-prompt
