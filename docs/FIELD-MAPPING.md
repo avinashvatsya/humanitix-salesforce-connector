@@ -15,8 +15,9 @@ One record per *(Humanitix resource → target SObject)*.
 | Source Resource | `Event` / `Order` / `Ticket` / `Tag` |
 | Source Collection Path | For nested arrays — `ticketTypes`, `dates`, `additionalFields`. Blank = the record itself. |
 | Target SObject | API name of the object to write, e.g. `Campaign`, `Contact`, or your own `My_Obj__c` |
-| External Id Field | The upsert key field (used by `ExternalId` / `MatchNoUpdate`) |
-| Match Strategy | `ExternalId`, `MatchByFields`, `MatchNoUpdate`, `AlwaysCreate` |
+| External Id Field | The upsert key field (used by `ExternalId`) |
+| Match Strategy | `ExternalId`, `MatchByFields`, `AlwaysCreate` |
+| Update Mode | `Always` (default), `BlanksOnly`, `Never` — how matched/existing records are updated |
 | Match Field Set | Comma-separated target fields for `MatchByFields`, e.g. `CampaignId,ContactId` |
 | Load Order | Lower runs first, so parents commit before children resolve |
 | Is Active | Turn a mapping on/off |
@@ -51,6 +52,34 @@ the source value (after its Transform, e.g. `Lower` to normalise an email) is
 matched against **Transform Arg = `<Object>.<ExternalIdField>`**. If no parent is
 found the lookup is left null — children are never orphaned or mislinked. Because
 resolution reads committed data, keep parents at a lower Load Order than children.
+
+## Update modes
+
+`Update Mode` controls what happens when an incoming Humanitix record matches a
+record that already exists in Salesforce:
+
+| Match Strategy | `Always` (default) | `BlanksOnly` | `Never` |
+| --- | --- | --- | --- |
+| `ExternalId` | Upsert: existing records are updated with the latest Humanitix values | Only fields that are currently blank are filled; existing values are never overwritten | Existing records are left untouched; only new keys are inserted |
+| `MatchByFields` | Matched records are fully updated | Matched records get blank fields filled only | Matched records are left untouched |
+| `AlwaysCreate` | *(ignored — every row is inserted)* | *(ignored)* | *(ignored)* |
+
+Unmatched/new records are always inserted in full, whatever the mode.
+
+**Interaction with field-level `Overwrite Blank`:** `Overwrite Blank` on a Field
+Mapping decides whether a *blank source value* may clear a populated target
+field, and only applies when the mode allows the field to be written at all
+(`Always`). Under `BlanksOnly`, populated target fields are never written,
+so `Overwrite Blank` has no effect; under `Never`, nothing on a matched record
+is written.
+
+**Interaction with duplicate rules:** `AlwaysCreate` in an org whose duplicate
+rules are set to *Block* will have those inserts rejected — they surface as
+failed rows in the sync log (the run itself continues). Prefer `MatchByFields`
+on Email, or set the duplicate rule to *Report*. `MatchByFields` updates at
+most one existing record per key; which one is chosen when the org already
+holds duplicates is not defined — merge duplicates first for deterministic
+results.
 
 ## What ships by default
 
