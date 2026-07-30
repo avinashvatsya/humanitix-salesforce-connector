@@ -18,11 +18,6 @@
                 <label>MatchByFields</label>
             </value>
             <value>
-                <fullName>MatchNoUpdate</fullName>
-                <default>false</default>
-                <label>MatchNoUpdate</label>
-            </value>
-            <value>
                 <fullName>AlwaysCreate</fullName>
                 <default>false</default>
                 <label>AlwaysCreate</label>
