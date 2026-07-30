@@ -69,11 +69,12 @@ def fm(source, target, dtype="Text", transform="None", arg=None,
 
 
 def om(dev, label, resource, target, ext_id_field=None, load=10,
-       match="ExternalId", match_fields=None, collection=None, active=True,
-       description=None, fields=None):
+       match="ExternalId", match_fields=None, update_mode="Always",
+       collection=None, active=True, description=None, fields=None):
     return dict(dev=dev, label=label, resource=resource, target=target,
                 ext_id_field=ext_id_field, load=load, match=match,
-                match_fields=match_fields, collection=collection, active=active,
+                match_fields=match_fields, update_mode=update_mode,
+                collection=collection, active=active,
                 description=description, fields=fields or [])
 
 
@@ -164,8 +165,9 @@ MAPPINGS.append(om(
 MAPPINGS.append(om(
     "Order_to_Contact", "Order to Contact (buyer)", "Order", "Contact",
     ext_id_field="Humanitix_Contact_Key__c", load=18,
-    description="Buyer becomes a Contact, matched on lower-cased email. Orders without an "
-                "email are skipped (attendees without email cannot be de-duplicated).",
+    match="MatchByFields", match_fields="Email", update_mode="BlanksOnly",
+    description="Buyer becomes a Contact, matched to existing Contacts by Email (blanks-only "
+                "updates: existing values are never overwritten). Orders without an email are skipped.",
     fields=[
         fm("email", "Humanitix_Contact_Key__c", "Text", "Lower", extid=True),
         fm("firstName", "FirstName"), fm("lastName", "LastName"),
@@ -337,6 +339,8 @@ def emit_object_mapping(m):
         rows.append(val("External_Id_Field__c", m["ext_id_field"], "string"))
     if m["match_fields"]:
         rows.append(val("Match_Field_Set__c", m["match_fields"], "string"))
+    if m["update_mode"] != "Always":
+        rows.append(val("Update_Mode__c", m["update_mode"], "string"))
     if m["collection"]:
         rows.append(val("Source_Collection_Path__c", m["collection"], "string"))
     if m["description"]:

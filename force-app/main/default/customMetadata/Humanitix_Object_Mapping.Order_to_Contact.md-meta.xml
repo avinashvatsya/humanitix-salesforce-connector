@@ -12,7 +12,15 @@
     </values>
     <values>
         <field>Match_Strategy__c</field>
-        <value xsi:type="xsd:string">ExternalId</value>
+        <value xsi:type="xsd:string">MatchByFields</value>
+    </values>
+    <values>
+        <field>Match_Field_Set__c</field>
+        <value xsi:type="xsd:string">Email</value>
+    </values>
+    <values>
+        <field>Update_Mode__c</field>
+        <value xsi:type="xsd:string">BlanksOnly</value>
     </values>
     <values>
         <field>Load_Order__c</field>
@@ -28,6 +36,6 @@
     </values>
     <values>
         <field>Description__c</field>
-        <value xsi:type="xsd:string">Buyer becomes a Contact, matched on lower-cased email. Orders without an email are skipped (attendees without email cannot be de-duplicated).</value>
+        <value xsi:type="xsd:string">Buyer becomes a Contact, matched to existing Contacts by Email (blanks-only updates: existing values are never overwritten). Orders without an email are skipped.</value>
     </values>
 </CustomMetadata>
