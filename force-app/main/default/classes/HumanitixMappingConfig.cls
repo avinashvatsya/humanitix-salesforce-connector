@@ -42,6 +42,7 @@ public with sharing class HumanitixMappingConfig {
     private static HumanitixMappingConfig instance;
     private static Map<String, Schema.SObjectType> globalDescribeCache;
     private static final Set<String> VALID_UPDATE_MODES = new Set<String>{ 'Always', 'BlanksOnly', 'Never' };
+    private static final Set<String> VALID_MATCH_STRATEGIES = new Set<String>{ 'ExternalId', 'MatchByFields', 'AlwaysCreate' };
 
     /** Cached global describe — avoids re-materializing describes per mapping/DML. */
     public static Map<String, Schema.SObjectType> globalDescribe() {
@@ -190,6 +191,9 @@ public with sharing class HumanitixMappingConfig {
             }
             if (m.matchStrategy == 'MatchByFields' && m.matchFields.isEmpty()) {
                 errors.add('Object Mapping "' + m.devName + '": strategy MatchByFields requires a Match Field Set.');
+            }
+            if (!VALID_MATCH_STRATEGIES.contains(m.matchStrategy)) {
+                errors.add('Object Mapping "' + m.devName + '": unknown Match Strategy "' + m.matchStrategy + '" (use ExternalId, MatchByFields or AlwaysCreate).');
             }
             if (!VALID_UPDATE_MODES.contains(m.updateMode)) {
                 errors.add('Object Mapping "' + m.devName + '": unknown Update Mode "' + m.updateMode + '" (use Always, BlanksOnly or Never).');

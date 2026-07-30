@@ -190,4 +190,27 @@ private class HumanitixMappingEngineTest {
         }
         System.assert(found, 'validate() must flag an unknown Update Mode; got: ' + errors);
     }
+
+    @IsTest
+    static void validateRejectsUnknownMatchStrategy() {
+        HumanitixMappingConfig cfg = new HumanitixMappingConfig();
+        HumanitixMappingConfig.ObjectMapping m = new HumanitixMappingConfig.ObjectMapping();
+        m.devName = 'Bad_Strategy_Mapping';
+        m.sourceResource = 'Tag';
+        m.targetSObject = 'Humanitix_Tag__c';
+        m.externalIdField = 'Humanitix_Id__c';
+        m.matchStrategy = 'MatchNoUpdate';
+        m.loadOrder = 1;
+        m.active = true;
+        m.updateMode = 'Always';
+        cfg.objectMappings.add(m);
+        List<String> errors = cfg.validate();
+        Boolean found = false;
+        for (String e : errors) {
+            if (e.contains('unknown Match Strategy "MatchNoUpdate"')) {
+                found = true;
+            }
+        }
+        System.assert(found, 'validate() must flag an unknown Match Strategy; got: ' + errors);
+    }
 }
