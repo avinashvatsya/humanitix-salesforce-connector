@@ -98,7 +98,6 @@ Metadata record — see [FIELD-MAPPING.md](FIELD-MAPPING.md#update-modes).
 
 ## Known limitations
 
-
 - **Attendee email:** Humanitix tickets carry no email (only the order does), so
   attendees are de-duplicated to the **buyer's** Contact by email. Per-ticket
   attendee detail is always preserved on `Humanitix_Ticket__c`.
@@ -108,15 +107,4 @@ Metadata record — see [FIELD-MAPPING.md](FIELD-MAPPING.md#update-modes).
   removing records. A periodic full-reconciliation sweep is on the roadmap.
 - **Marketing User** is required for the Campaign/Campaign Member mappings (above).
 - **Money** values are stored as-is (decimal major units, e.g. 53.98).
-
-### Choosing how buyer Contacts are matched
-
-The `Order_to_Contact` mapping ships with Match Strategy `MatchByFields` on
-`Email` and Update Mode `BlanksOnly`: buyers are de-duplicated against existing
-Contacts by email, missing details are filled in, and values your org already
-has are never overwritten. To let Humanitix data overwrite Salesforce
-(`Always`), to leave matched Contacts completely untouched (`Never`), or to
-always create new Contacts and let your own duplicate rules handle merging
-(`AlwaysCreate`), edit the `Humanitix Object Mapping > Order_to_Contact` Custom
-Metadata record — see [FIELD-MAPPING.md](FIELD-MAPPING.md#update-modes).
 
