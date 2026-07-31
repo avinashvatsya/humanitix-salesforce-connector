@@ -12,5 +12,5 @@
         <label>Entry</label>
         <type>AutoNumber</type>
     </nameField>
-    <sharingModel>ReadWrite</sharingModel>
+    <sharingModel>ControlledByParent</sharingModel>
 </CustomObject>

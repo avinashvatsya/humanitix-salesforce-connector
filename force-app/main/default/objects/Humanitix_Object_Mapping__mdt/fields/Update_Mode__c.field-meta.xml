@@ -3,8 +3,8 @@
     <fullName>Update_Mode__c</fullName>
     <fieldManageability>SubscriberControlled</fieldManageability>
     <label>Update Mode</label>
-    <type>Picklist</type>
     <description>How matched/existing records are updated. Always (default): overwrite with the latest Humanitix values. BlanksOnly: fill only fields that are currently blank — never overwrite values the org already has. Never: leave matched records untouched; only new records are inserted. Ignored when Match Strategy is AlwaysCreate.</description>
+    <type>Picklist</type>
     <valueSet>
         <valueSetDefinition>
             <sorted>false</sorted>

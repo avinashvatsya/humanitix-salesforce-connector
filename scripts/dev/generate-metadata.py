@@ -26,7 +26,7 @@ PS_DIR = os.path.join(BASE, "permissionsets")
 # phases add them; kept here so the permission set stays consistent. Deploys of
 # just the objects (Phase 1) work because these lists start empty.
 ADMIN_APEX_CLASSES = [
-    "HumanitixApiException", "HumanitixMappingException",
+    "HumanitixMappingException",
     "HumanitixJsonNavigator", "HumanitixTypeCoercer", "HumanitixMappingConfig",
     "HumanitixRecordBuilder", "HumanitixRelationshipResolver", "HumanitixPersister",
     "HumanitixMappingEngine",
@@ -177,7 +177,9 @@ def object_xml(o):
         lines.append(f"        <label>{esc(nf.get('label', 'Name'))}</label>")
         lines.append("        <type>Text</type>")
     lines.append("    </nameField>")
-    lines.append("    <sharingModel>ReadWrite</sharingModel>")
+    # Master-detail children must be ControlledByParent; anything else is rejected on deploy.
+    has_md = any(f.get("type") == "masterdetail" for f in o.get("fields", []))
+    lines.append(f"    <sharingModel>{'ControlledByParent' if has_md else 'ReadWrite'}</sharingModel>")
     lines.append("</CustomObject>")
     return "\n".join(lines) + "\n"
 
@@ -214,8 +216,8 @@ def look(api, refTo, relName, label=None, relLabel=None):
 def md(api, refTo, relName, label=None, relLabel=None):
     return dict(api=api, type="masterdetail", refTo=refTo, relName=relName, label=label, relLabel=relLabel)
 
-def PICK(api, values, default=None, label=None):
-    return dict(api=api, type="picklist", values=values, default=default, label=label)
+def PICK(api, values, default=None, label=None, **kw):
+    return dict(api=api, type="picklist", values=values, default=default, label=label, **kw)
 
 
 OBJECTS = {}
@@ -399,7 +401,8 @@ CMTS["Humanitix_Object_Mapping__mdt"] = dict(
         PICK("Match_Strategy__c", ["ExternalId", "MatchByFields", "AlwaysCreate"],
              default="ExternalId", label="Match Strategy"),
         PICK("Update_Mode__c", ["Always", "BlanksOnly", "Never"],
-             default="Always", label="Update Mode"),
+             default="Always", label="Update Mode",
+             description="How matched/existing records are updated. Always (default): overwrite with the latest Humanitix values. BlanksOnly: fill only fields that are currently blank — never overwrite values the org already has. Never: leave matched records untouched; only new records are inserted. Ignored when Match Strategy is AlwaysCreate."),
         T("Match_Field_Set__c", label="Match Field Set",
           helpText="Comma-separated target field API names used when Match Strategy is MatchByFields."),
         NUM("Load_Order__c", precision=4, label="Load Order"),
@@ -528,59 +531,71 @@ def fls_entries(obj_api, fields, editable):
 
 def permission_set(api, label, description, objects, standard, tabs,
                    apex_classes, ext_cred_access, cmt_edit, user_read_only=False, app=None):
-    lines = ['<?xml version="1.0" encoding="UTF-8"?>',
-             '<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">',
-             f"    <label>{esc(label)}</label>",
-             "    <hasActivationRequired>false</hasActivationRequired>",
-             f"    <description>{esc(description)}</description>"]
+    """Emit PermissionSet XML with all same-typed elements contiguous, groups in
+    the Metadata API's canonical (alphabetical) child order. Interleaving
+    objectPermissions/fieldPermissions per object parses as XML but the deploy
+    rejects it: "Element objectPermissions is duplicated at this location"."""
+    app_vis, class_acc, ext_cred, field_perms, obj_perms, tab_settings = [], [], [], [], [], []
+
     if app:
-        lines.append("    <applicationVisibilities>")
-        lines.append(f"        <application>{app}</application>")
-        lines.append("        <visible>true</visible>")
-        lines.append("    </applicationVisibilities>")
-    # object + field permissions for custom objects
+        app_vis += ["    <applicationVisibilities>",
+                    f"        <application>{app}</application>",
+                    "        <visible>true</visible>",
+                    "    </applicationVisibilities>"]
+    for cls in apex_classes:
+        class_acc += ["    <classAccesses>",
+                      f"        <apexClass>{cls}</apexClass>",
+                      "        <enabled>true</enabled>",
+                      "    </classAccesses>"]
+    if ext_cred_access:
+        ext_cred += ["    <externalCredentialPrincipalAccesses>",
+                     f"        <externalCredentialPrincipal>{ext_cred_access}</externalCredentialPrincipal>",
+                     "        <enabled>true</enabled>",
+                     "    </externalCredentialPrincipalAccesses>"]
     for obj_api in objects:
         o = OBJECTS[obj_api]
         c = "false" if user_read_only else "true"
-        lines.append("    <objectPermissions>")
-        lines.append(f"        <object>{obj_api}</object>")
-        lines.append(f"        <allowCreate>{c}</allowCreate>")
-        lines.append("        <allowRead>true</allowRead>")
-        lines.append(f"        <allowEdit>{c}</allowEdit>")
-        lines.append(f"        <allowDelete>{c}</allowDelete>")
-        lines.append(f"        <viewAllRecords>{'true' if user_read_only else 'true'}</viewAllRecords>")
-        lines.append(f"        <modifyAllRecords>{c}</modifyAllRecords>")
-        lines.append("    </objectPermissions>")
+        obj_perms += ["    <objectPermissions>",
+                      f"        <object>{obj_api}</object>",
+                      f"        <allowCreate>{c}</allowCreate>",
+                      "        <allowRead>true</allowRead>",
+                      f"        <allowEdit>{c}</allowEdit>",
+                      f"        <allowDelete>{c}</allowDelete>",
+                      "        <viewAllRecords>true</viewAllRecords>",
+                      f"        <modifyAllRecords>{c}</modifyAllRecords>",
+                      "    </objectPermissions>"]
         for field, _ in fls_entries(obj_api, o["fields"], not user_read_only):
-            lines.append("    <fieldPermissions>")
-            lines.append(f"        <field>{field}</field>")
-            lines.append(f"        <readable>true</readable>")
-            lines.append(f"        <editable>{'false' if user_read_only else 'true'}</editable>")
-            lines.append("    </fieldPermissions>")
+            field_perms += ["    <fieldPermissions>",
+                            f"        <field>{field}</field>",
+                            "        <readable>true</readable>",
+                            f"        <editable>{'false' if user_read_only else 'true'}</editable>",
+                            "    </fieldPermissions>"]
     # field permissions for standard-object custom fields (admin only)
     if not user_read_only:
         for sobj, fields in standard.items():
             for field, _ in fls_entries(sobj, fields, True):
-                lines.append("    <fieldPermissions>")
-                lines.append(f"        <field>{field}</field>")
-                lines.append("        <readable>true</readable>")
-                lines.append("        <editable>true</editable>")
-                lines.append("    </fieldPermissions>")
-    for cls in apex_classes:
-        lines.append("    <classAccesses>")
-        lines.append(f"        <apexClass>{cls}</apexClass>")
-        lines.append("        <enabled>true</enabled>")
-        lines.append("    </classAccesses>")
+                field_perms += ["    <fieldPermissions>",
+                                f"        <field>{field}</field>",
+                                "        <readable>true</readable>",
+                                "        <editable>true</editable>",
+                                "    </fieldPermissions>"]
     for tab in tabs:
-        lines.append("    <tabSettings>")
-        lines.append(f"        <tab>{tab}</tab>")
-        lines.append("        <visibility>Visible</visibility>")
-        lines.append("    </tabSettings>")
-    if ext_cred_access:
-        lines.append("    <externalCredentialPrincipalAccesses>")
-        lines.append(f"        <externalCredentialPrincipal>{ext_cred_access}</externalCredentialPrincipal>")
-        lines.append("        <enabled>true</enabled>")
-        lines.append("    </externalCredentialPrincipalAccesses>")
+        tab_settings += ["    <tabSettings>",
+                         f"        <tab>{tab}</tab>",
+                         "        <visibility>Visible</visibility>",
+                         "    </tabSettings>"]
+
+    lines = ['<?xml version="1.0" encoding="UTF-8"?>',
+             '<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">']
+    lines += app_vis
+    lines += class_acc
+    lines.append(f"    <description>{esc(description)}</description>")
+    lines += ext_cred
+    lines += field_perms
+    lines.append("    <hasActivationRequired>false</hasActivationRequired>")
+    lines.append(f"    <label>{esc(label)}</label>")
+    lines += obj_perms
+    lines += tab_settings
     lines.append("</PermissionSet>")
     return "\n".join(lines) + "\n"
 

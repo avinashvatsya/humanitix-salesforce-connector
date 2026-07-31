@@ -78,6 +78,14 @@ private class HumanitixTypeCoercerTest {
     }
 
     @IsTest
+    static void nullBooleanCoercesToFalseNotNull() {
+        // Checkbox targets are non-nillable; a missing source value must map to
+        // unchecked, never null (null trips INVALID_TYPE_ON_FIELD_IN_RECORD at DML).
+        System.assertEquals(false, (Boolean) coerce(null, 'Boolean', 'None', null));
+        System.assertEquals(false, (Boolean) coerce(null, 'Boolean', 'BoolMap', null));
+    }
+
+    @IsTest
     static void nullRawYieldsNull() {
         System.assertEquals(null, coerce(null, 'Text', 'None', null));
         System.assertEquals(null, coerce(null, 'DateTime', 'IsoToDateTime', null));

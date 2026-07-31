@@ -54,7 +54,7 @@ private class HumanitixSyncQueueableTest {
         }
         Test.stopTest();
 
-        System.assertEquals(HumanitixSyncQueueable.StepOutcome.CONTINUE, oc);
+        System.assertEquals(HumanitixSyncQueueable.StepOutcome.PROCEED, oc);
         System.assertEquals(1, [SELECT COUNT() FROM Humanitix_Tag__c WHERE Humanitix_Id__c = 'tag_1']);
         System.assertEquals(1, q.getState().phaseIndex, 'should advance from Tags to Events');
         System.assertEquals(1, [SELECT COUNT() FROM Humanitix_Sync_Log_Entry__c WHERE Resource__c = 'Tag']);
@@ -163,6 +163,50 @@ private class HumanitixSyncQueueableTest {
         Test.stopTest();
 
         System.assertEquals(HumanitixSyncQueueable.StepOutcome.DONE, oc);
+    }
+
+    @IsTest
+    static void emptyPhaseListFinalizesImmediately() {
+        HumanitixSyncQueueable q = new HumanitixSyncQueueable(baseState(new List<String>()));
+
+        Test.startTest();
+        HumanitixSyncQueueable.StepOutcome oc = q.runStep();
+        Test.stopTest();
+
+        System.assertEquals(HumanitixSyncQueueable.StepOutcome.DONE, oc);
+    }
+
+    @IsTest
+    static void ordersPhaseWithNoEventsAdvances() {
+        delete [SELECT Id FROM Humanitix_Event__c];
+        HumanitixSyncQueueable q = new HumanitixSyncQueueable(baseState(new List<String>{ 'Orders' }));
+
+        Test.startTest();
+        HumanitixSyncQueueable.StepOutcome oc = q.runStep();
+        Test.stopTest();
+
+        System.assertEquals(HumanitixSyncQueueable.StepOutcome.DONE, oc, 'no events to iterate -> phase ends the run');
+    }
+
+    @IsTest
+    static void ticketsStepBuildsFilteredRequestAndAdvances() {
+        Test.setMock(
+            HttpCalloutMock.class,
+            new HumanitixCalloutMock().enqueue(200, HumanitixTestDataFactory.pageBody('tickets', '', 0, 1, 100))
+        );
+        HumanitixSyncState st = baseState(new List<String>{ 'Tickets' });
+        st.ticketStatusFilter = 'complete';
+        st.incremental = false; // non-incremental path skips the since cursor
+        HumanitixSyncQueueable q = new HumanitixSyncQueueable(st);
+
+        Test.startTest();
+        HumanitixSyncQueueable.StepOutcome oc = null;
+        System.runAs(HumanitixTestDataFactory.marketingAdmin()) {
+            oc = q.runStep();
+        }
+        Test.stopTest();
+
+        System.assertEquals(HumanitixSyncQueueable.StepOutcome.DONE, oc, 'empty tickets page for the only event ends the run');
     }
 
     @IsTest

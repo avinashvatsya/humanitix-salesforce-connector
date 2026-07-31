@@ -10,7 +10,7 @@
  * Incremental: `since` comes from the per-cursor watermark, promoted only on success.
  */
 public with sharing class HumanitixSyncQueueable implements Queueable, Database.AllowsCallouts {
-    public enum StepOutcome { CONTINUE, RETRY, DONE }
+    public enum StepOutcome { PROCEED, RETRY, DONE }
 
     // Absolute per-work-item page ceiling — a hard stop against an endpoint that
     // never signals the last page (defense against an unbounded async chain).
@@ -41,7 +41,7 @@ public with sharing class HumanitixSyncQueueable implements Queueable, Database.
                 cursorKey(), phaseToResourceKey(safePhase()), state.currentEventId, state.runId
             );
             advanceWorkItem();
-            outcome = state.isDone() ? finalizeAndDone() : StepOutcome.CONTINUE;
+            outcome = state.isDone() ? finalizeAndDone() : StepOutcome.PROCEED;
         }
         chain(outcome);
     }
@@ -59,7 +59,7 @@ public with sharing class HumanitixSyncQueueable implements Queueable, Database.
             String first = HumanitixSyncStateService.nextEventId(null);
             if (String.isBlank(first)) {
                 state.advancePhase();
-                return state.isDone() ? finalizeAndDone() : StepOutcome.CONTINUE;
+                return state.isDone() ? finalizeAndDone() : StepOutcome.PROCEED;
             }
             state.currentEventId = first;
             state.page = 1;
@@ -87,7 +87,7 @@ public with sharing class HumanitixSyncQueueable implements Queueable, Database.
                 );
                 HumanitixSyncStateService.recordFailure(cursorKey(), req.resourceKey, state.currentEventId, state.runId);
                 advanceWorkItem();
-                return state.isDone() ? finalizeAndDone() : StepOutcome.CONTINUE;
+                return state.isDone() ? finalizeAndDone() : StepOutcome.PROCEED;
             }
             state.retryDelay = HumanitixRetryPolicy.delayMinutes(
                 state.attempt, state.retryDelayMinutes, res == null ? null : res.getHeader('Retry-After')
@@ -102,7 +102,7 @@ public with sharing class HumanitixSyncQueueable implements Queueable, Database.
             );
             HumanitixSyncStateService.recordFailure(cursorKey(), req.resourceKey, state.currentEventId, state.runId);
             advanceWorkItem();
-            return state.isDone() ? finalizeAndDone() : StepOutcome.CONTINUE;
+            return state.isDone() ? finalizeAndDone() : StepOutcome.PROCEED;
         }
 
         // SUCCESS
@@ -121,7 +121,7 @@ public with sharing class HumanitixSyncQueueable implements Queueable, Database.
         } else {
             promoteAndAdvance(phase);
         }
-        return state.isDone() ? finalizeAndDone() : StepOutcome.CONTINUE;
+        return state.isDone() ? finalizeAndDone() : StepOutcome.PROCEED;
     }
 
     // ---- request building -------------------------------------------------

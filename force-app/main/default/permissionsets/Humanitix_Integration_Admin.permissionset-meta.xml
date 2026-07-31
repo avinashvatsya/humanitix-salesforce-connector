@@ -1,21 +1,94 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
-    <label>Humanitix Integration Admin</label>
-    <hasActivationRequired>false</hasActivationRequired>
-    <description>Full access to configure and run the Humanitix connector. Assigning this activates the API callout principal.</description>
     <applicationVisibilities>
         <application>Humanitix_Integration</application>
         <visible>true</visible>
     </applicationVisibilities>
-    <objectPermissions>
-        <object>Humanitix_Event__c</object>
-        <allowCreate>true</allowCreate>
-        <allowRead>true</allowRead>
-        <allowEdit>true</allowEdit>
-        <allowDelete>true</allowDelete>
-        <viewAllRecords>true</viewAllRecords>
-        <modifyAllRecords>true</modifyAllRecords>
-    </objectPermissions>
+    <classAccesses>
+        <apexClass>HumanitixMappingException</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixJsonNavigator</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixTypeCoercer</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixMappingConfig</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixRecordBuilder</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixRelationshipResolver</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixPersister</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixMappingEngine</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixApiResponse</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixRetryPolicy</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixHttpClient</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixSyncConfig</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixSyncState</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixSyncStateService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixSyncLogService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixSyncQueueable</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixSyncLauncher</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixSyncScheduler</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixSyncInvocable</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixSyncAdminController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <description>Full access to configure and run the Humanitix connector. Assigning this activates the API callout principal.</description>
+    <externalCredentialPrincipalAccesses>
+        <externalCredentialPrincipal>HumanitixAPI-Humanitix_Named_Principal</externalCredentialPrincipal>
+        <enabled>true</enabled>
+    </externalCredentialPrincipalAccesses>
     <fieldPermissions>
         <field>Humanitix_Event__c.Humanitix_Id__c</field>
         <readable>true</readable>
@@ -151,15 +224,6 @@
         <readable>true</readable>
         <editable>true</editable>
     </fieldPermissions>
-    <objectPermissions>
-        <object>Humanitix_Ticket_Type__c</object>
-        <allowCreate>true</allowCreate>
-        <allowRead>true</allowRead>
-        <allowEdit>true</allowEdit>
-        <allowDelete>true</allowDelete>
-        <viewAllRecords>true</viewAllRecords>
-        <modifyAllRecords>true</modifyAllRecords>
-    </objectPermissions>
     <fieldPermissions>
         <field>Humanitix_Ticket_Type__c.Humanitix_Id__c</field>
         <readable>true</readable>
@@ -205,15 +269,6 @@
         <readable>true</readable>
         <editable>true</editable>
     </fieldPermissions>
-    <objectPermissions>
-        <object>Humanitix_Event_Date__c</object>
-        <allowCreate>true</allowCreate>
-        <allowRead>true</allowRead>
-        <allowEdit>true</allowEdit>
-        <allowDelete>true</allowDelete>
-        <viewAllRecords>true</viewAllRecords>
-        <modifyAllRecords>true</modifyAllRecords>
-    </objectPermissions>
     <fieldPermissions>
         <field>Humanitix_Event_Date__c.Humanitix_Id__c</field>
         <readable>true</readable>
@@ -254,15 +309,6 @@
         <readable>true</readable>
         <editable>true</editable>
     </fieldPermissions>
-    <objectPermissions>
-        <object>Humanitix_Order__c</object>
-        <allowCreate>true</allowCreate>
-        <allowRead>true</allowRead>
-        <allowEdit>true</allowEdit>
-        <allowDelete>true</allowDelete>
-        <viewAllRecords>true</viewAllRecords>
-        <modifyAllRecords>true</modifyAllRecords>
-    </objectPermissions>
     <fieldPermissions>
         <field>Humanitix_Order__c.Humanitix_Id__c</field>
         <readable>true</readable>
@@ -428,15 +474,6 @@
         <readable>true</readable>
         <editable>true</editable>
     </fieldPermissions>
-    <objectPermissions>
-        <object>Humanitix_Ticket__c</object>
-        <allowCreate>true</allowCreate>
-        <allowRead>true</allowRead>
-        <allowEdit>true</allowEdit>
-        <allowDelete>true</allowDelete>
-        <viewAllRecords>true</viewAllRecords>
-        <modifyAllRecords>true</modifyAllRecords>
-    </objectPermissions>
     <fieldPermissions>
         <field>Humanitix_Ticket__c.Humanitix_Id__c</field>
         <readable>true</readable>
@@ -597,15 +634,6 @@
         <readable>true</readable>
         <editable>true</editable>
     </fieldPermissions>
-    <objectPermissions>
-        <object>Humanitix_Order_Attribute__c</object>
-        <allowCreate>true</allowCreate>
-        <allowRead>true</allowRead>
-        <allowEdit>true</allowEdit>
-        <allowDelete>true</allowDelete>
-        <viewAllRecords>true</viewAllRecords>
-        <modifyAllRecords>true</modifyAllRecords>
-    </objectPermissions>
     <fieldPermissions>
         <field>Humanitix_Order_Attribute__c.Humanitix_Id__c</field>
         <readable>true</readable>
@@ -641,15 +669,6 @@
         <readable>true</readable>
         <editable>true</editable>
     </fieldPermissions>
-    <objectPermissions>
-        <object>Humanitix_Ticket_Attribute__c</object>
-        <allowCreate>true</allowCreate>
-        <allowRead>true</allowRead>
-        <allowEdit>true</allowEdit>
-        <allowDelete>true</allowDelete>
-        <viewAllRecords>true</viewAllRecords>
-        <modifyAllRecords>true</modifyAllRecords>
-    </objectPermissions>
     <fieldPermissions>
         <field>Humanitix_Ticket_Attribute__c.Humanitix_Id__c</field>
         <readable>true</readable>
@@ -685,15 +704,6 @@
         <readable>true</readable>
         <editable>true</editable>
     </fieldPermissions>
-    <objectPermissions>
-        <object>Humanitix_Tag__c</object>
-        <allowCreate>true</allowCreate>
-        <allowRead>true</allowRead>
-        <allowEdit>true</allowEdit>
-        <allowDelete>true</allowDelete>
-        <viewAllRecords>true</viewAllRecords>
-        <modifyAllRecords>true</modifyAllRecords>
-    </objectPermissions>
     <fieldPermissions>
         <field>Humanitix_Tag__c.Humanitix_Id__c</field>
         <readable>true</readable>
@@ -719,15 +729,6 @@
         <readable>true</readable>
         <editable>true</editable>
     </fieldPermissions>
-    <objectPermissions>
-        <object>Humanitix_Sync_Log__c</object>
-        <allowCreate>true</allowCreate>
-        <allowRead>true</allowRead>
-        <allowEdit>true</allowEdit>
-        <allowDelete>true</allowDelete>
-        <viewAllRecords>true</viewAllRecords>
-        <modifyAllRecords>true</modifyAllRecords>
-    </objectPermissions>
     <fieldPermissions>
         <field>Humanitix_Sync_Log__c.Run_Id__c</field>
         <readable>true</readable>
@@ -793,15 +794,6 @@
         <readable>true</readable>
         <editable>true</editable>
     </fieldPermissions>
-    <objectPermissions>
-        <object>Humanitix_Sync_Log_Entry__c</object>
-        <allowCreate>true</allowCreate>
-        <allowRead>true</allowRead>
-        <allowEdit>true</allowEdit>
-        <allowDelete>true</allowDelete>
-        <viewAllRecords>true</viewAllRecords>
-        <modifyAllRecords>true</modifyAllRecords>
-    </objectPermissions>
     <fieldPermissions>
         <field>Humanitix_Sync_Log_Entry__c.Resource__c</field>
         <readable>true</readable>
@@ -857,15 +849,6 @@
         <readable>true</readable>
         <editable>true</editable>
     </fieldPermissions>
-    <objectPermissions>
-        <object>Humanitix_Sync_State__c</object>
-        <allowCreate>true</allowCreate>
-        <allowRead>true</allowRead>
-        <allowEdit>true</allowEdit>
-        <allowDelete>true</allowDelete>
-        <viewAllRecords>true</viewAllRecords>
-        <modifyAllRecords>true</modifyAllRecords>
-    </objectPermissions>
     <fieldPermissions>
         <field>Humanitix_Sync_State__c.Cursor_Key__c</field>
         <readable>true</readable>
@@ -1021,90 +1004,107 @@
         <readable>true</readable>
         <editable>true</editable>
     </fieldPermissions>
-    <classAccesses>
-        <apexClass>HumanitixApiException</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
-    <classAccesses>
-        <apexClass>HumanitixMappingException</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
-    <classAccesses>
-        <apexClass>HumanitixJsonNavigator</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
-    <classAccesses>
-        <apexClass>HumanitixTypeCoercer</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
-    <classAccesses>
-        <apexClass>HumanitixMappingConfig</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
-    <classAccesses>
-        <apexClass>HumanitixRecordBuilder</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
-    <classAccesses>
-        <apexClass>HumanitixRelationshipResolver</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
-    <classAccesses>
-        <apexClass>HumanitixPersister</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
-    <classAccesses>
-        <apexClass>HumanitixMappingEngine</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
-    <classAccesses>
-        <apexClass>HumanitixApiResponse</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
-    <classAccesses>
-        <apexClass>HumanitixRetryPolicy</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
-    <classAccesses>
-        <apexClass>HumanitixHttpClient</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
-    <classAccesses>
-        <apexClass>HumanitixSyncConfig</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
-    <classAccesses>
-        <apexClass>HumanitixSyncState</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
-    <classAccesses>
-        <apexClass>HumanitixSyncStateService</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
-    <classAccesses>
-        <apexClass>HumanitixSyncLogService</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
-    <classAccesses>
-        <apexClass>HumanitixSyncQueueable</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
-    <classAccesses>
-        <apexClass>HumanitixSyncLauncher</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
-    <classAccesses>
-        <apexClass>HumanitixSyncScheduler</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
-    <classAccesses>
-        <apexClass>HumanitixSyncInvocable</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
-    <classAccesses>
-        <apexClass>HumanitixSyncAdminController</apexClass>
-        <enabled>true</enabled>
-    </classAccesses>
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>Humanitix Integration Admin</label>
+    <objectPermissions>
+        <object>Humanitix_Event__c</object>
+        <allowCreate>true</allowCreate>
+        <allowRead>true</allowRead>
+        <allowEdit>true</allowEdit>
+        <allowDelete>true</allowDelete>
+        <viewAllRecords>true</viewAllRecords>
+        <modifyAllRecords>true</modifyAllRecords>
+    </objectPermissions>
+    <objectPermissions>
+        <object>Humanitix_Ticket_Type__c</object>
+        <allowCreate>true</allowCreate>
+        <allowRead>true</allowRead>
+        <allowEdit>true</allowEdit>
+        <allowDelete>true</allowDelete>
+        <viewAllRecords>true</viewAllRecords>
+        <modifyAllRecords>true</modifyAllRecords>
+    </objectPermissions>
+    <objectPermissions>
+        <object>Humanitix_Event_Date__c</object>
+        <allowCreate>true</allowCreate>
+        <allowRead>true</allowRead>
+        <allowEdit>true</allowEdit>
+        <allowDelete>true</allowDelete>
+        <viewAllRecords>true</viewAllRecords>
+        <modifyAllRecords>true</modifyAllRecords>
+    </objectPermissions>
+    <objectPermissions>
+        <object>Humanitix_Order__c</object>
+        <allowCreate>true</allowCreate>
+        <allowRead>true</allowRead>
+        <allowEdit>true</allowEdit>
+        <allowDelete>true</allowDelete>
+        <viewAllRecords>true</viewAllRecords>
+        <modifyAllRecords>true</modifyAllRecords>
+    </objectPermissions>
+    <objectPermissions>
+        <object>Humanitix_Ticket__c</object>
+        <allowCreate>true</allowCreate>
+        <allowRead>true</allowRead>
+        <allowEdit>true</allowEdit>
+        <allowDelete>true</allowDelete>
+        <viewAllRecords>true</viewAllRecords>
+        <modifyAllRecords>true</modifyAllRecords>
+    </objectPermissions>
+    <objectPermissions>
+        <object>Humanitix_Order_Attribute__c</object>
+        <allowCreate>true</allowCreate>
+        <allowRead>true</allowRead>
+        <allowEdit>true</allowEdit>
+        <allowDelete>true</allowDelete>
+        <viewAllRecords>true</viewAllRecords>
+        <modifyAllRecords>true</modifyAllRecords>
+    </objectPermissions>
+    <objectPermissions>
+        <object>Humanitix_Ticket_Attribute__c</object>
+        <allowCreate>true</allowCreate>
+        <allowRead>true</allowRead>
+        <allowEdit>true</allowEdit>
+        <allowDelete>true</allowDelete>
+        <viewAllRecords>true</viewAllRecords>
+        <modifyAllRecords>true</modifyAllRecords>
+    </objectPermissions>
+    <objectPermissions>
+        <object>Humanitix_Tag__c</object>
+        <allowCreate>true</allowCreate>
+        <allowRead>true</allowRead>
+        <allowEdit>true</allowEdit>
+        <allowDelete>true</allowDelete>
+        <viewAllRecords>true</viewAllRecords>
+        <modifyAllRecords>true</modifyAllRecords>
+    </objectPermissions>
+    <objectPermissions>
+        <object>Humanitix_Sync_Log__c</object>
+        <allowCreate>true</allowCreate>
+        <allowRead>true</allowRead>
+        <allowEdit>true</allowEdit>
+        <allowDelete>true</allowDelete>
+        <viewAllRecords>true</viewAllRecords>
+        <modifyAllRecords>true</modifyAllRecords>
+    </objectPermissions>
+    <objectPermissions>
+        <object>Humanitix_Sync_Log_Entry__c</object>
+        <allowCreate>true</allowCreate>
+        <allowRead>true</allowRead>
+        <allowEdit>true</allowEdit>
+        <allowDelete>true</allowDelete>
+        <viewAllRecords>true</viewAllRecords>
+        <modifyAllRecords>true</modifyAllRecords>
+    </objectPermissions>
+    <objectPermissions>
+        <object>Humanitix_Sync_State__c</object>
+        <allowCreate>true</allowCreate>
+        <allowRead>true</allowRead>
+        <allowEdit>true</allowEdit>
+        <allowDelete>true</allowDelete>
+        <viewAllRecords>true</viewAllRecords>
+        <modifyAllRecords>true</modifyAllRecords>
+    </objectPermissions>
     <tabSettings>
         <tab>Humanitix_Sync_Log__c</tab>
         <visibility>Visible</visibility>
@@ -1113,8 +1113,4 @@
         <tab>Humanitix_Setup</tab>
         <visibility>Visible</visibility>
     </tabSettings>
-    <externalCredentialPrincipalAccesses>
-        <externalCredentialPrincipal>HumanitixAPI-Humanitix_Named_Principal</externalCredentialPrincipal>
-        <enabled>true</enabled>
-    </externalCredentialPrincipalAccesses>
 </PermissionSet>

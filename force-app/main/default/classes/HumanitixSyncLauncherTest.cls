@@ -30,6 +30,16 @@ private class HumanitixSyncLauncherTest {
     }
 
     @IsTest
+    static void invocableReturnsErrorStringWhenDisabled() {
+        insert new Humanitix_Sync_Toggle__c(SetupOwnerId = UserInfo.getOrganizationId(), Sync_Enabled__c = false);
+        Test.startTest();
+        List<String> out = HumanitixSyncInvocable.run();
+        Test.stopTest();
+        System.assertEquals(1, out.size());
+        System.assert(out[0].startsWith('ERROR:'), 'launch rejection becomes an ERROR string, got: ' + out[0]);
+    }
+
+    @IsTest
     static void rejectsOverlap() {
         // an in-progress run from "just now" blocks a second launch
         HumanitixSyncLogService.start('existing', 'Scheduled', 'Events');

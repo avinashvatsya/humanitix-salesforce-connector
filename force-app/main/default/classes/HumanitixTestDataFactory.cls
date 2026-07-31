@@ -105,6 +105,16 @@ public class HumanitixTestDataFactory {
         User u = buildMarketingAdmin();
         System.runAs(new User(Id = UserInfo.getUserId())) {
             insert u;
+            // API-deployed custom fields carry no FLS for any profile, sysadmin
+            // included — the connector's field access comes only from this
+            // permission set, so the runAs user needs it just like a real admin.
+            PermissionSet ps = [
+                SELECT Id
+                FROM PermissionSet
+                WHERE Name = 'Humanitix_Integration_Admin'
+                LIMIT 1
+            ];
+            insert new PermissionSetAssignment(AssigneeId = u.Id, PermissionSetId = ps.Id);
         }
     }
 

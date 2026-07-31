@@ -77,9 +77,14 @@ public with sharing class HumanitixSyncConfig {
     }
 
     public static Boolean syncEnabled() {
-        Humanitix_Sync_Toggle__c t = Humanitix_Sync_Toggle__c.getInstance();
-        // Hierarchy custom setting defaults Sync_Enabled__c to true when no record exists.
-        return t == null || t.Sync_Enabled__c != false;
+        // Org-level kill switch. getOrgDefaults() returns an empty instance
+        // (Id == null) when no toggle record has been saved; checkbox fields on
+        // that empty instance read false regardless of the field's declared
+        // default, so "no record" must be treated as enabled explicitly.
+        // (getInstance() is unsuitable here: it merges levels and returns a
+        // null-Id instance even when an org-default record exists.)
+        Humanitix_Sync_Toggle__c t = Humanitix_Sync_Toggle__c.getOrgDefaults();
+        return t == null || t.Id == null || t.Sync_Enabled__c != false;
     }
 
     private static Integer intOf(Decimal d, Integer fallback) {

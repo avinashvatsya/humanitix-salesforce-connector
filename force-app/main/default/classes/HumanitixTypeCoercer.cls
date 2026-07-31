@@ -94,10 +94,18 @@ public with sharing class HumanitixTypeCoercer {
     }
 
     private static Object coerceType(Object v, String dataType) {
+        String dt0 = String.isBlank(dataType) ? 'Text' : dataType;
+        if (dt0 == 'Boolean') {
+            // Checkbox fields are non-nillable: writing null trips
+            // INVALID_TYPE_ON_FIELD_IN_RECORD at DML. A missing/null source
+            // value maps to unchecked.
+            Boolean b = toBool(v);
+            return b == null ? false : b;
+        }
         if (v == null) {
             return null;
         }
-        String dt = String.isBlank(dataType) ? 'Text' : dataType;
+        String dt = dt0;
         switch on dt {
             when 'Text', 'LongText', 'Email', 'Phone', 'Url', 'Reference' {
                 return String.valueOf(v);

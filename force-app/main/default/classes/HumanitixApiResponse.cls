@@ -48,9 +48,13 @@ public with sharing class HumanitixApiResponse {
         if (total != null && page != null && pageSize != null && pageSize > 0) {
             return (page * pageSize) < total;
         }
-        // Pagination metadata missing: only assume another page when this page was
-        // full. Never loop indefinitely on a response that omits totals.
-        return pageSize != null && pageSize > 0 && size >= pageSize;
+        // Pagination metadata missing: a short page (size < known pageSize) is the
+        // last page; otherwise assume another page and let the next empty page
+        // terminate the loop.
+        if (pageSize != null && pageSize > 0 && size < pageSize) {
+            return false;
+        }
+        return true;
     }
 
     public Integer nextPage() {
