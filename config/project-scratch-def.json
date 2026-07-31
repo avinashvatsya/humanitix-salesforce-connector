@@ -1,13 +1,5 @@
 {
   "orgName": "Humanitix Salesforce Connector",
   "edition": "developer",
-  "features": ["EnableSetPasswordInApi"],
-  "settings": {
-    "lightningExperienceSettings": {
-      "enableS1DesktopEnabled": true
-    },
-    "mobileSettings": {
-      "enableS1EncryptedStoragePref2": false
-    }
-  }
+  "features": ["EnableSetPasswordInApi"]
 }

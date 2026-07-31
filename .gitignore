@@ -27,3 +27,6 @@ Thumbs.db
 
 # Build output
 force-app-*.zip
+
+# VS Code LWC tooling (generated, references .sfdx typings)
+**/lwc/jsconfig.json
