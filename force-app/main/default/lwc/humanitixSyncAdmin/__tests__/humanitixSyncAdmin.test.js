@@ -30,6 +30,16 @@ function flush() {
   return Promise.resolve();
 }
 
+// The Jest stubs receive `label` as a JS property, which never reflects to a
+// DOM attribute, so an attribute selector can't find the button.
+function runButton(element) {
+  return (
+    Array.from(element.shadowRoot.querySelectorAll('lightning-button')).find(
+      (b) => b.label === 'Run Sync Now'
+    ) || null
+  );
+}
+
 describe('c-humanitix-sync-admin', () => {
   afterEach(() => {
     while (document.body.firstChild) {
@@ -46,7 +56,7 @@ describe('c-humanitix-sync-admin', () => {
     getRecentRuns.emit([]);
     await flush();
 
-    const button = element.shadowRoot.querySelector('lightning-button[label="Run Sync Now"]');
+    const button = runButton(element);
     expect(button).not.toBeNull();
   });
 
@@ -58,7 +68,7 @@ describe('c-humanitix-sync-admin', () => {
     getRecentRuns.emit([]);
     await flush();
 
-    const button = element.shadowRoot.querySelector('lightning-button[label="Run Sync Now"]');
+    const button = runButton(element);
     button.dispatchEvent(new CustomEvent('click'));
     await flush();
 
@@ -73,7 +83,7 @@ describe('c-humanitix-sync-admin', () => {
     getRecentRuns.emit([]);
     await flush();
 
-    const button = element.shadowRoot.querySelector('lightning-button[label="Run Sync Now"]');
+    const button = runButton(element);
     expect(button).toBeNull();
   });
 });
