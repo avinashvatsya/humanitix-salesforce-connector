@@ -13,5 +13,8 @@
   "name": "humanitix-salesforce-connector",
   "namespace": "",
   "sfdcLoginUrl": "https://login.salesforce.com",
-  "sourceApiVersion": "62.0"
+  "sourceApiVersion": "62.0",
+  "packageAliases": {
+    "Humanitix Salesforce Connector": "0HoOb00000001FRKAY"
+  }
 }
