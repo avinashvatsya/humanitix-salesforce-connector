@@ -29,6 +29,35 @@ can install it from a URL, the same way projects like
    git push
    ```
 
+## What the package does (and doesn't) contain
+
+The default mapping records (`force-app/main/default/customMetadata/`) are
+**deliberately excluded** from the package (see `.forceignore`): a Summer '26
+platform bug fails any Metadata API deploy that contains CustomMetadata
+records, including package version builds. Instead the defaults ship inside the
+`Humanitix_Default_Mappings` static resource and are seeded by
+`HumanitixMappingSeeder` the first time the *Humanitix Setup* tab loads in an
+org without mapping records (unlocked packages don't support post-install
+scripts). The seeder only creates records that don't already exist, so
+subscriber edits survive upgrades. After changing anything under
+`customMetadata/`, regenerate the resource before building a version:
+
+```bash
+python3 scripts/dev/generate-mappings-resource.py
+```
+
+Once Salesforce fixes the platform bug, the records can move back into the
+package by removing the `customMetadata` line from `.forceignore` — keep the
+seeder as a safety net for orgs that installed while the bug stood.
+
+Package builds use `config/package-build-def.json` (see `definitionFile` in
+`sfdx-project.json`), not the dev scratch def. It deliberately has **no
+`edition`**: since late July 2026 the packaging service rejects build requests
+whose definition specifies an edition ("When attempting to copy an org's
+shape, edition cannot be specified") — another server-side regression, also
+not in the public known issues. Direct `sf org create scratch` still requires
+an edition, hence the two files.
+
 ## Each release
 
 ```bash

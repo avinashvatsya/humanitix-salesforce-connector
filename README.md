@@ -49,12 +49,12 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full design.
 
 ## <a name="install"></a>Install
 
-Install the **unlocked package** directly — no cloning or building required. Replace `04t…` below with the version ID from the [latest release](../../releases) (maintainers: see [docs/PUBLISHING.md](docs/PUBLISHING.md) to create it).
+Install the **unlocked package** directly — no cloning or building required. Current version: **1.0.0** (`04tOb000002GydNIAS`; maintainers: see [docs/PUBLISHING.md](docs/PUBLISHING.md) to release a new one).
 
 | Environment | Click to install | Salesforce CLI |
 | --- | --- | --- |
-| **Production / Developer** | [Install](https://login.salesforce.com/packaging/installPackage.apexp?p0=04t...) | `sf package install --package 04t... --wait 20 --security-type AdminsOnly` |
-| **Sandbox** | [Install](https://test.salesforce.com/packaging/installPackage.apexp?p0=04t...) | `sf package install --package 04t... --wait 20 --security-type AdminsOnly --target-org <sandbox>` |
+| **Production / Developer** | [Install](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tOb000002GydNIAS) | `sf package install --package 04tOb000002GydNIAS --wait 20 --security-type AdminsOnly` |
+| **Sandbox** | [Install](https://test.salesforce.com/packaging/installPackage.apexp?p0=04tOb000002GydNIAS) | `sf package install --package 04tOb000002GydNIAS --wait 20 --security-type AdminsOnly --target-org <sandbox>` |
 
 After installing: assign the **Humanitix Integration Admin** permission set, enter your API key, and make the running user a Marketing User — full steps in **[docs/INSTALL.md](docs/INSTALL.md)** and **[docs/CONFIGURATION.md](docs/CONFIGURATION.md)**. Prefer to build from source? See [Develop / contribute](#develop--contribute).
 
