@@ -18,6 +18,12 @@ sf project deploy start --target-org "$ALIAS" --wait 30
 echo "==> Assigning permission set Humanitix_Integration_Admin"
 sf org assign permset --name Humanitix_Integration_Admin --target-org "$ALIAS"
 
+# The mapping CMT records can't deploy via the Metadata API while the Summer '26
+# platform bug stands (see .forceignore); seed them from the packaged static
+# resource instead. The deployment is async — records appear within a minute.
+echo "==> Seeding default mapping metadata (async, ~1 min)"
+echo "System.enqueueJob(new HumanitixMappingSeeder());" | sf apex run --target-org "$ALIAS"
+
 cat <<'EONOTE'
 
 ==> Done.

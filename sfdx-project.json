@@ -7,7 +7,7 @@
       "versionName": "Version 1.0",
       "versionNumber": "1.0.0.NEXT",
       "versionDescription": "Open-source read-only connector that syncs Humanitix events, orders, tickets and tags into Salesforce.",
-      "definitionFile": "config/project-scratch-def.json"
+      "definitionFile": "config/package-build-def.json"
     }
   ],
   "name": "humanitix-salesforce-connector",
@@ -15,6 +15,8 @@
   "sfdcLoginUrl": "https://login.salesforce.com",
   "sourceApiVersion": "62.0",
   "packageAliases": {
-    "Humanitix Salesforce Connector": "0HoOb00000001FRKAY"
+    "Humanitix Salesforce Connector": "0HoOb00000001FRKAY",
+    "Humanitix Salesforce Connector@1.0.0-1": "04tOb000002GyblIAC",
+    "Humanitix Salesforce Connector@1.0.0-2": "04tOb000002GydNIAS"
   }
 }

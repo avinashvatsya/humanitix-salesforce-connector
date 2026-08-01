@@ -23,6 +23,26 @@ private class HumanitixSyncAdminControllerTest {
     }
 
     @IsTest
+    static void ensureDefaultMappingsSeedsOnlyWhenRecordsMissing() {
+        // Deterministic in both worlds: a dev org already has mapping records
+        // (no seeding), the bare package-build org has none (seeding starts).
+        Boolean orgHasRecords = [SELECT COUNT() FROM Humanitix_Object_Mapping__mdt] > 0;
+
+        Test.startTest();
+        Boolean first = HumanitixSyncAdminController.ensureDefaultMappings();
+        Boolean second = HumanitixSyncAdminController.ensureDefaultMappings();
+        Test.stopTest();
+
+        System.assertEquals(!orgHasRecords, first, 'seeding must start exactly when no mapping records exist');
+        System.assertEquals(first, second, 'repeat calls report the same state');
+        System.assertEquals(
+            orgHasRecords ? 0 : 1,
+            [SELECT COUNT() FROM AsyncApexJob WHERE ApexClass.Name = 'HumanitixMappingSeeder' AND JobType = 'Queueable'],
+            'the seeder must be enqueued once at most while a job is already in flight'
+        );
+    }
+
+    @IsTest
     static void getRecentRunsAndEnabledFlag() {
         HumanitixSyncLogService.start('r1', 'Manual', 'Events');
         Test.startTest();

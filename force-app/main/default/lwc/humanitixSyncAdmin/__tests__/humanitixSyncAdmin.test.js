@@ -3,10 +3,16 @@ import HumanitixSyncAdmin from 'c/humanitixSyncAdmin';
 import runSyncNow from '@salesforce/apex/HumanitixSyncAdminController.runSyncNow';
 import getRecentRuns from '@salesforce/apex/HumanitixSyncAdminController.getRecentRuns';
 import isSyncEnabled from '@salesforce/apex/HumanitixSyncAdminController.isSyncEnabled';
+import ensureDefaultMappings from '@salesforce/apex/HumanitixSyncAdminController.ensureDefaultMappings';
 
 jest.mock(
   '@salesforce/apex/HumanitixSyncAdminController.runSyncNow',
   () => ({ default: jest.fn(() => Promise.resolve('a01000000000001')) }),
+  { virtual: true }
+);
+jest.mock(
+  '@salesforce/apex/HumanitixSyncAdminController.ensureDefaultMappings',
+  () => ({ default: jest.fn(() => Promise.resolve(false)) }),
   { virtual: true }
 );
 jest.mock(
@@ -73,6 +79,14 @@ describe('c-humanitix-sync-admin', () => {
     await flush();
 
     expect(runSyncNow).toHaveBeenCalled();
+  });
+
+  it('checks for default mappings on load', async () => {
+    const element = createElement('c-humanitix-sync-admin', { is: HumanitixSyncAdmin });
+    document.body.appendChild(element);
+    await flush();
+
+    expect(ensureDefaultMappings).toHaveBeenCalled();
   });
 
   it('shows a disabled message when sync is off', async () => {

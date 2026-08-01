@@ -16,3 +16,11 @@ force-app/test/**
 # Standard-object retrieval noise (we only ship the custom fields we add)
 **/objectTranslations/**
 package.xml
+
+# Summer '26 platform bug: any Metadata API deploy containing CustomMetadata
+# RECORDS gacks (UNKNOWN_EXCEPTION), which also breaks package version builds.
+# The records stay in the repo as the source of truth, but ship via the
+# Humanitix_Default_Mappings static resource and are seeded post-install by
+# HumanitixMappingSeeder (Metadata.Operations is unaffected by the bug).
+# Remove this exclusion once Salesforce fixes the gack.
+**/customMetadata/**

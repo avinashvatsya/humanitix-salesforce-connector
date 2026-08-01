@@ -4,6 +4,11 @@
  * validates it against the org schema. This is the single source of truth for
  * where every Humanitix field lands — no object or field API name is hard-coded
  * in Apex, so an admin repoints data by editing metadata alone.
+ *
+ * When the org has no mapping records at all (fresh install before seeding),
+ * the config falls back to the shipped defaults in the
+ * Humanitix_Default_Mappings static resource, so a sync works even before the
+ * records exist. Org records, once present, are fully authoritative.
  */
 public with sharing class HumanitixMappingConfig {
     public class ObjectMapping implements Comparable {
@@ -86,14 +91,43 @@ public with sharing class HumanitixMappingConfig {
     }
 
     private static HumanitixMappingConfig load() {
-        HumanitixMappingConfig cfg = new HumanitixMappingConfig();
-        Map<String, ObjectMapping> byName = new Map<String, ObjectMapping>();
-        for (Humanitix_Object_Mapping__mdt om : [
+        List<Humanitix_Object_Mapping__mdt> objectRecords = [
             SELECT DeveloperName, Source_Resource__c, Source_Collection_Path__c, Target_SObject__c,
                 External_Id_Field__c, Match_Strategy__c, Match_Field_Set__c,
                 Load_Order__c, Is_Active__c, Update_Mode__c
             FROM Humanitix_Object_Mapping__mdt
-        ]) {
+        ];
+        if (objectRecords.isEmpty()) {
+            // No mapping records at all — a fresh install before the seeder has
+            // run (or whose seed failed). Fall back to the shipped defaults from
+            // the static resource so the connector works out of the box. The
+            // moment ANY org record exists, org records are fully authoritative:
+            // no merging, and admins disable defaults via Is Active, not delete.
+            return fromRecords(
+                HumanitixDefaultMappings.objectMappings(),
+                HumanitixDefaultMappings.fieldMappings()
+            );
+        }
+        return fromRecords(objectRecords, [
+            SELECT Object_Mapping__c, Source_Path__c, Target_Field__c, Data_Type__c, Transform__c,
+                Transform_Arg__c, Is_External_Id__c, Overwrite_Blank__c, Is_Active__c
+            FROM Humanitix_Field_Mapping__mdt
+        ]);
+    }
+
+    /**
+     * Translates raw CMT records into a validated-shape config. Shared by load()
+     * (org records) and the test path (records parsed from the shipped
+     * Humanitix_Default_Mappings static resource), so both exercise the same
+     * translation and defaulting rules.
+     */
+    public static HumanitixMappingConfig fromRecords(
+        List<Humanitix_Object_Mapping__mdt> objectRecords,
+        List<Humanitix_Field_Mapping__mdt> fieldRecords
+    ) {
+        HumanitixMappingConfig cfg = new HumanitixMappingConfig();
+        Map<String, ObjectMapping> byName = new Map<String, ObjectMapping>();
+        for (Humanitix_Object_Mapping__mdt om : objectRecords) {
             ObjectMapping m = new ObjectMapping();
             m.devName = om.DeveloperName;
             m.sourceResource = om.Source_Resource__c;
@@ -108,11 +142,7 @@ public with sharing class HumanitixMappingConfig {
             byName.put(m.devName, m);
             cfg.objectMappings.add(m);
         }
-        for (Humanitix_Field_Mapping__mdt fm : [
-            SELECT Object_Mapping__c, Source_Path__c, Target_Field__c, Data_Type__c, Transform__c,
-                Transform_Arg__c, Is_External_Id__c, Overwrite_Blank__c, Is_Active__c
-            FROM Humanitix_Field_Mapping__mdt
-        ]) {
+        for (Humanitix_Field_Mapping__mdt fm : fieldRecords) {
             ObjectMapping parent = byName.get(fm.Object_Mapping__c);
             if (parent == null) {
                 continue; // orphaned field mapping; ignore quietly

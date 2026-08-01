@@ -77,6 +77,24 @@ public class HumanitixTestDataFactory {
             '"' + arrayField + '":[' + recordsJson + ']}';
     }
 
+    /**
+     * Injects the SHIPPED default mappings into HumanitixMappingConfig from the
+     * packaged Humanitix_Default_Mappings static resource. The package cannot
+     * include the mapping CMT records (Summer '26 platform bug on CMT-record
+     * deploys), so tests that exercise the default mappings must build them
+     * in memory instead of reading org records — this keeps them green in the
+     * bare package-build org while still testing the real shipped defaults.
+     * Call at the start of every test method that runs the mapping engine.
+     */
+    public static void useShippedMappings() {
+        HumanitixMappingConfig.setInstance(
+            HumanitixMappingConfig.fromRecords(
+                HumanitixDefaultMappings.objectMappings(),
+                HumanitixDefaultMappings.fieldMappings()
+            )
+        );
+    }
+
     // ---- Marketing User for Campaign/Campaign Member tests ----------------
     // Creating Campaigns requires the running user to be a Marketing User, so the
     // Campaign-producing tests run under System.runAs(marketingAdmin()). Insert the

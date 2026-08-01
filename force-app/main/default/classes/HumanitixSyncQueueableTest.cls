@@ -44,6 +44,7 @@ private class HumanitixSyncQueueableTest {
 
     @IsTest
     static void tagsStepMapsAndAdvances() {
+        HumanitixTestDataFactory.useShippedMappings();
         Test.setMock(HttpCalloutMock.class, new HumanitixCalloutMock().enqueue(200, page('tags', HumanitixTestDataFactory.tagJson())));
         HumanitixSyncQueueable q = new HumanitixSyncQueueable(baseState(new List<String>{ 'Tags', 'Events' }));
 
@@ -62,6 +63,7 @@ private class HumanitixSyncQueueableTest {
 
     @IsTest
     static void eventsStepPromotesCursorAndFinalizes() {
+        HumanitixTestDataFactory.useShippedMappings();
         Test.setMock(HttpCalloutMock.class, new HumanitixCalloutMock().enqueue(200, page('events', HumanitixTestDataFactory.eventJson())));
         HumanitixSyncQueueable q = new HumanitixSyncQueueable(baseState(new List<String>{ 'Events' }));
 
@@ -80,6 +82,7 @@ private class HumanitixSyncQueueableTest {
 
     @IsTest
     static void ordersStepResolvesEventAndMaps() {
+        HumanitixTestDataFactory.useShippedMappings();
         Test.setMock(HttpCalloutMock.class, new HumanitixCalloutMock().enqueue(200, page('orders', HumanitixTestDataFactory.orderJson())));
         HumanitixSyncQueueable q = new HumanitixSyncQueueable(baseState(new List<String>{ 'Orders' }));
 

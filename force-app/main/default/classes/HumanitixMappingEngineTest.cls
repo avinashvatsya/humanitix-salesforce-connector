@@ -1,9 +1,13 @@
 /**
- * End-to-end mapping tests that exercise the SHIPPED default Custom Metadata
- * mappings (visible in tests without seeAllData). They assert the correctness
- * properties that the adversarial design review called out: timezone-correct
- * dates, decimal money, email-based Contact identity, reference resolution,
- * nested-collection expansion, and idempotency.
+ * End-to-end mapping tests that exercise the SHIPPED default mappings. The
+ * defaults are injected from the packaged Humanitix_Default_Mappings static
+ * resource (via HumanitixTestDataFactory.useShippedMappings) rather than read
+ * from org CMT records, because the package cannot ship the records while the
+ * Summer '26 platform bug gacks CMT-record deploys — the package-build org
+ * therefore has none. The tests assert the correctness properties that the
+ * adversarial design review called out: timezone-correct dates, decimal money,
+ * email-based Contact identity, reference resolution, nested-collection
+ * expansion, and idempotency.
  *
  * Runs under a Marketing User (via System.runAs) because the default Event ->
  * Campaign and Order -> Campaign Member mappings create Campaign records.
@@ -17,6 +21,7 @@ private class HumanitixMappingEngineTest {
 
     @IsTest
     static void eventMapsToCampaignAndStaging() {
+        HumanitixTestDataFactory.useShippedMappings();
         System.runAs(HumanitixTestDataFactory.marketingAdmin()) {
             Test.startTest();
             HumanitixMappingEngine.run('Event', HumanitixTestDataFactory.events());
@@ -63,6 +68,7 @@ private class HumanitixMappingEngineTest {
 
     @IsTest
     static void orderMapsToContactOrderAndCampaignMember() {
+        HumanitixTestDataFactory.useShippedMappings();
         System.runAs(HumanitixTestDataFactory.marketingAdmin()) {
             Test.startTest();
             HumanitixMappingEngine.run('Event', HumanitixTestDataFactory.events());
@@ -99,6 +105,7 @@ private class HumanitixMappingEngineTest {
 
     @IsTest
     static void ticketMapsToStagingWithResolvedParents() {
+        HumanitixTestDataFactory.useShippedMappings();
         System.runAs(HumanitixTestDataFactory.marketingAdmin()) {
             Test.startTest();
             HumanitixMappingEngine.run('Event', HumanitixTestDataFactory.events());
@@ -121,6 +128,7 @@ private class HumanitixMappingEngineTest {
 
     @IsTest
     static void tagMapsToStaging() {
+        HumanitixTestDataFactory.useShippedMappings();
         System.runAs(HumanitixTestDataFactory.marketingAdmin()) {
             Test.startTest();
             HumanitixMappingEngine.run('Tag', HumanitixTestDataFactory.tags());
@@ -132,6 +140,7 @@ private class HumanitixMappingEngineTest {
 
     @IsTest
     static void reRunIsIdempotent() {
+        HumanitixTestDataFactory.useShippedMappings();
         System.runAs(HumanitixTestDataFactory.marketingAdmin()) {
             Test.startTest();
             HumanitixMappingEngine.run('Event', HumanitixTestDataFactory.events());
@@ -145,6 +154,7 @@ private class HumanitixMappingEngineTest {
 
     @IsTest
     static void inPageDuplicateKeysCollapse() {
+        HumanitixTestDataFactory.useShippedMappings();
         List<Object> two = (List<Object>) JSON.deserializeUntyped(
             '[' + HumanitixTestDataFactory.eventJson() + ',' + HumanitixTestDataFactory.eventJson() + ']'
         );
@@ -157,6 +167,24 @@ private class HumanitixMappingEngineTest {
             1,
             [SELECT COUNT() FROM Campaign WHERE Humanitix_Event_Id__c = :HumanitixTestDataFactory.EVENT_ID],
             'Two source rows with the same key in one page should collapse to a single upsert'
+        );
+    }
+
+    @IsTest
+    static void worksWithoutInjectionViaOrgRecordsOrShippedFallback() {
+        // Deliberately NO useShippedMappings() here: in a dev org this loads
+        // the seeded CMT records; in the bare package-build org (no records)
+        // it exercises the shipped-defaults fallback in HumanitixMappingConfig.
+        // Either way the connector must map out of the box.
+        System.runAs(HumanitixTestDataFactory.marketingAdmin()) {
+            Test.startTest();
+            HumanitixMappingEngine.run('Tag', HumanitixTestDataFactory.tags());
+            Test.stopTest();
+        }
+        System.assertEquals(
+            1,
+            [SELECT COUNT() FROM Humanitix_Tag__c WHERE Humanitix_Id__c = 'tag_1'],
+            'a sync with no injected config must map via org records or the shipped defaults'
         );
     }
 

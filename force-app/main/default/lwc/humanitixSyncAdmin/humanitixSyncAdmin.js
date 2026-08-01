@@ -4,6 +4,7 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import runSyncNow from '@salesforce/apex/HumanitixSyncAdminController.runSyncNow';
 import getRecentRuns from '@salesforce/apex/HumanitixSyncAdminController.getRecentRuns';
 import isSyncEnabled from '@salesforce/apex/HumanitixSyncAdminController.isSyncEnabled';
+import ensureDefaultMappings from '@salesforce/apex/HumanitixSyncAdminController.ensureDefaultMappings';
 
 const COLUMNS = [
   { label: 'Run', fieldName: 'Name' },
@@ -46,6 +47,24 @@ export default class HumanitixSyncAdmin extends LightningElement {
     if (result.data) {
       this.runs = result.data;
     }
+  }
+
+  connectedCallback() {
+    // Unlocked packages can't run post-install scripts, so a fresh install has
+    // no mapping records until this first panel load kicks off the seeder.
+    ensureDefaultMappings()
+      .then((seedingStarted) => {
+        if (seedingStarted) {
+          this.toast(
+            'Installing default mappings',
+            'The default Humanitix mapping metadata is being created — it appears under Setup > Custom Metadata Types within a minute.',
+            'info'
+          );
+        }
+      })
+      .catch(() => {
+        // Non-fatal: the panel still works; seeding can be run manually.
+      });
   }
 
   get hasRuns() {
