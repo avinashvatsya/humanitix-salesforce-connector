@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - Scratch/dev org alias is `htx-dev` (README default). If the user's org alias differs, substitute it in every command — ask before assuming.
-- Git commits are authored solely by Avinash Vatsya. **Never add a `Co-Authored-By` trailer or any Claude credit.**
+- Git commits are authored solely by Avinash Vatsya, **with no `Co-Authored-By` trailers of any kind.**
 - The working tree contains unrelated uncommitted WIP. **Always `git add` the explicit paths listed in the task — never `git add -A` / `git add .`**
 - CustomMetadata **records** cannot be deployed with `sf project deploy` (Summer '26 platform gack). Record XML is edited in source for future package builds, and org records are seeded via `Metadata.Operations` (Task 4). CustomField/class deploys are unaffected.
 - Behaviour matrix being implemented (from the spec, reconciled with existing code):
