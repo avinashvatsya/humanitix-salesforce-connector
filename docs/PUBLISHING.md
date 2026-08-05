@@ -83,8 +83,15 @@ sf package version promote --package 04t... --target-dev-hub devhub --no-prompt
 sf package version list --target-dev-hub devhub
 ```
 
-Then update the install links in [`README.md`](../README.md) with the promoted
-`04t…` id (Production = `login.salesforce.com`, Sandbox = `test.salesforce.com`).
+Then update the install buttons/links in [`README.md`](../README.md) and
+[`INSTALL.md`](INSTALL.md) with the promoted `04t…` id — each file has an
+*Install in Sandbox* button (`test.salesforce.com`), an *Install in Production*
+button (`login.salesforce.com`) and a `sf package install` command, so replace
+every occurrence:
+
+```bash
+grep -rl 04tOb000002GydNIAS README.md docs/ | xargs sed -i '' 's/04tOb000002GydNIAS/<new 04t id>/g'
+```
 
 ## Versioning
 

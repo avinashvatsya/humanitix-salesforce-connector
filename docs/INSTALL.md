@@ -11,11 +11,23 @@
 
 ## Option A — Install the unlocked package (recommended for most orgs)
 
-1. Open the install URL published on the [latest release](../../releases) (looks
-   like `https://login.salesforce.com/packaging/installPackage.apexp?p0=04t…`).
-   Use `test.salesforce.com` for sandboxes.
+Version 1.0.0 (`04tOb000002GydNIAS`):
+
+[![Install in Sandbox](https://img.shields.io/badge/Install%20in%20Sandbox-5A6E7F?style=for-the-badge&logo=salesforce&logoColor=white)](https://test.salesforce.com/packaging/installPackage.apexp?p0=04tOb000002GydNIAS)
+[![Install in Production](https://img.shields.io/badge/Install%20in%20Production-00A1E0?style=for-the-badge&logo=salesforce&logoColor=white)](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tOb000002GydNIAS)
+
+1. Click **Install in Production** (production, Developer Edition or Trailhead
+   Playground) or **Install in Sandbox**. The buttons above always point at the
+   current release; the same URL is published on the
+   [latest release](../../releases).
 2. Choose **Install for Admins Only** (you grant access via the permission set).
 3. After install, continue with [Post-install setup](#post-install-setup).
+
+Or from the Salesforce CLI:
+
+```bash
+sf package install --package 04tOb000002GydNIAS --wait 20 --security-type AdminsOnly --target-org <alias>
+```
 
 > **No-namespace note:** this package has no namespace, so its components install
 > into your org's default namespace. Every component is prefixed `Humanitix` /
