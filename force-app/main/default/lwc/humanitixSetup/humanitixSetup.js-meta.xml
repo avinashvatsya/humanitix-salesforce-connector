@@ -2,8 +2,8 @@
 <LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
     <apiVersion>62.0</apiVersion>
     <isExposed>true</isExposed>
-    <masterLabel>Humanitix Sync Admin (Deprecated)</masterLabel>
-    <description>Deprecated. Use the Humanitix Setup component instead; this wrapper renders its Dashboard tab only.</description>
+    <masterLabel>Humanitix Setup</masterLabel>
+    <description>Tabbed admin console for the Humanitix connector: runs, connection, settings, schedule, and mappings.</description>
     <targets>
         <target>lightning__AppPage</target>
         <target>lightning__HomePage</target>

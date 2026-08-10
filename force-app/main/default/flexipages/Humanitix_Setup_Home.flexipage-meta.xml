@@ -3,8 +3,8 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
-                <componentName>humanitixSyncAdmin</componentName>
-                <identifier>humanitixSyncAdmin1</identifier>
+                <componentName>humanitixSetup</componentName>
+                <identifier>humanitixSetup1</identifier>
             </componentInstance>
         </itemInstances>
         <name>main</name>
