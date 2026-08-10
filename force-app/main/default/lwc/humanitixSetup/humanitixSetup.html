@@ -1,0 +1,9 @@
+<template>
+  <lightning-tabset variant="scoped" active-tab-value="dashboard">
+    <lightning-tab label="Dashboard" value="dashboard" onactive={handleTabActive}>
+      <template lwc:if={visited.dashboard}>
+        <c-humanitix-setup-dashboard></c-humanitix-setup-dashboard>
+      </template>
+    </lightning-tab>
+  </lightning-tabset>
+</template>
