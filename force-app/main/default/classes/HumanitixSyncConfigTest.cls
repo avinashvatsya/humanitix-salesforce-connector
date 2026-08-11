@@ -2,14 +2,22 @@
 private class HumanitixSyncConfigTest {
     @IsTest
     static void defaultsFromShippedSetting() {
-        // The packaged Default Humanitix Sync Setting is visible in tests.
-        System.assertEquals(100, HumanitixSyncConfig.pageSize());
-        System.assertEquals('HumanitixAPI', HumanitixSyncConfig.namedCredentialName());
-        System.assert(HumanitixSyncConfig.maxRetries() >= 1);
-        System.assert(HumanitixSyncConfig.enabledResources().size() > 0);
-        // canonical order: Tags before Events before Orders before Tickets
+        // The org's Default Humanitix Sync Setting is visible in tests, and the
+        // Sync Settings tab lets admins edit it, so assert invariants rather
+        // than shipped literals (fallback literals are covered below).
+        System.assert(HumanitixSyncConfig.pageSize() >= 1);
+        System.assert(String.isNotBlank(HumanitixSyncConfig.namedCredentialName()));
+        System.assert(HumanitixSyncConfig.maxRetries() >= 0);
         List<String> r = HumanitixSyncConfig.enabledResources();
-        System.assertEquals('Tags', r[0]);
+        System.assert(r.size() > 0);
+        // canonical order: whatever subset is enabled must follow Tags, Events, Orders, Tickets
+        List<Integer> positions = new List<Integer>();
+        for (String resource : r) {
+            positions.add(HumanitixSyncConfig.CANONICAL_ORDER.indexOf(resource));
+        }
+        for (Integer i = 1; i < positions.size(); i++) {
+            System.assert(positions[i] > positions[i - 1], 'Resources out of canonical order: ' + r);
+        }
     }
 
     @IsTest
