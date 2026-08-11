@@ -1,0 +1,145 @@
+<template>
+  <lightning-card title="Sync Settings" icon-name="standard:settings">
+    <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+      <template lwc:if={isLoading}>
+        <div class="slds-is-relative slds-p-vertical_large">
+          <lightning-spinner alternative-text="Loading settings" size="small"></lightning-spinner>
+        </div>
+      </template>
+      <template lwc:else>
+        <lightning-input
+          data-id="sync-enabled"
+          type="toggle"
+          label="Sync Enabled"
+          field-level-help="Turns all sync activity on or off immediately. Scheduled and manual runs will not start while this is off."
+          message-toggle-active="On"
+          message-toggle-inactive="Off"
+          checked={syncEnabled}
+          onchange={handleSyncEnabledChange}
+          class="slds-m-bottom_medium"
+        ></lightning-input>
+
+        <template lwc:if={showNewRecordBanner}>
+          <div class={bannerClass} role="status">
+            <div class="slds-media__body">
+              <p>No settings record exists yet. Saving this form creates it.</p>
+            </div>
+          </div>
+        </template>
+
+        <lightning-input
+          type="number"
+          label="Page Size"
+          field-level-help="How many records each API page fetch requests. 100 works for most orgs."
+          value={pageSize}
+          min="1"
+          max="1000"
+          disabled={isSaving}
+          onchange={handlePageSizeChange}
+          class="slds-m-bottom_small"
+        ></lightning-input>
+
+        <div class="slds-m-bottom_small">
+          <lightning-checkbox-group
+            label="Enabled Resources"
+            options={resourceOptions}
+            value={enabledResources}
+            disabled={isSaving}
+            onchange={handleResourcesChange}
+          ></lightning-checkbox-group>
+          <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+            Which Humanitix resources the sync pulls.
+          </p>
+        </div>
+
+        <lightning-input
+          type="checkbox"
+          label="Future events only"
+          field-level-help="Skip events that already finished."
+          checked={inFutureOnly}
+          disabled={isSaving}
+          onchange={handleInFutureOnlyChange}
+          class="slds-m-bottom_small"
+        ></lightning-input>
+
+        <lightning-input
+          type="text"
+          label="Ticket Status Filter"
+          field-level-help="Optional. Only sync tickets in this status, for example complete. Leave blank for all statuses."
+          value={ticketStatusFilter}
+          disabled={isSaving}
+          onchange={handleTicketStatusFilterChange}
+          class="slds-m-bottom_small"
+        ></lightning-input>
+
+        <lightning-input
+          type="number"
+          label="Max Retries"
+          field-level-help="How many times a failed API call is retried before the run gives up."
+          value={maxRetries}
+          min="0"
+          max="10"
+          disabled={isSaving}
+          onchange={handleMaxRetriesChange}
+          class="slds-m-bottom_small"
+        ></lightning-input>
+
+        <lightning-input
+          type="number"
+          label="Retry Delay Minutes"
+          field-level-help="How long to wait before retrying a failed API call."
+          value={retryDelayMinutes}
+          min="1"
+          max="1440"
+          disabled={isSaving}
+          onchange={handleRetryDelayChange}
+          class="slds-m-bottom_small"
+        ></lightning-input>
+
+        <lightning-combobox
+          label="Since Mode"
+          field-level-help="Modified sends a since watermark so each run only pulls changes. FullPull refetches everything every run."
+          options={sinceModeOptions}
+          value={sinceMode}
+          disabled={isSaving}
+          onchange={handleSinceModeChange}
+          class="slds-m-bottom_small"
+        ></lightning-combobox>
+
+        <lightning-input
+          type="text"
+          label="Named Credential Name"
+          field-level-help="Advanced. Leave as HumanitixAPI unless you cloned the named credential."
+          value={namedCredentialName}
+          disabled={isSaving}
+          onchange={handleNamedCredentialChange}
+          class="slds-m-bottom_small"
+        ></lightning-input>
+
+        <div class="slds-is-relative slds-m-top_medium">
+          <lightning-button
+            variant="brand"
+            label="Save Settings"
+            onclick={handleSave}
+            disabled={isSaving}
+          ></lightning-button>
+          <template lwc:if={isSaving}>
+            <lightning-spinner alternative-text="Saving settings" size="small"></lightning-spinner>
+          </template>
+        </div>
+
+        <template lwc:if={deployStatus}>
+          <p class="slds-text-body_small slds-text-color_weak slds-m-top_small">{deployStatus}</p>
+        </template>
+
+        <template lwc:if={hasDeployError}>
+          <div class={deployErrorClass} role="alert">
+            <div class="slds-media__body">
+              <p>{deployError}</p>
+            </div>
+          </div>
+        </template>
+      </template>
+    </div>
+  </lightning-card>
+</template>
