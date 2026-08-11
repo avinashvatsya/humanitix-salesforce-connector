@@ -200,8 +200,7 @@ public with sharing class HumanitixMappingAdminController {
             if (!problems.isEmpty()) {
                 throw new AuraHandledException('Fix these problems before saving: ' + String.join(problems, ' '));
             }
-            Id jobId = HumanitixMetadataWriter.deploy(deployRecords(pending), 'Mappings');
-            return jobId == null ? null : String.valueOf(jobId);
+            return HumanitixMetadataWriter.deploy(deployRecords(pending), 'Mappings');
         } catch (AuraHandledException e) {
             throw e;
         } catch (Exception e) {
