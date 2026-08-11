@@ -1,0 +1,119 @@
+<template>
+  <section
+    role="dialog"
+    tabindex="-1"
+    aria-modal="true"
+    aria-labelledby="field-form-heading"
+    class="slds-modal slds-fade-in-open slds-modal_medium"
+  >
+    <div class="slds-modal__container">
+      <header class="slds-modal__header">
+        <h2 id="field-form-heading" class="slds-modal__title slds-hyphenate">{heading}</h2>
+        <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">{subheading}</p>
+      </header>
+
+      <div class="slds-modal__content slds-p-around_medium">
+        <template lwc:if={hasProblems}>
+          <div class={problemClass} role="alert">
+            <div class="slds-media__body">
+              <ul class="slds-list_dotted">
+                <template for:each={problems} for:item="problem">
+                  <li key={problem}>{problem}</li>
+                </template>
+              </ul>
+            </div>
+          </div>
+        </template>
+
+        <lightning-input
+          type="text"
+          label="Source Path"
+          field-level-help="JSON path in the Humanitix payload, for example eventName or tickets[0].price. $parent. and $root. prefixes reach enclosing records."
+          value={sourcePath}
+          onchange={handleSourcePathChange}
+          class="slds-m-bottom_small"
+        ></lightning-input>
+
+        <template lwc:if={isLoadingFields}>
+          <p class="slds-text-body_small slds-text-color_weak slds-m-bottom_xx-small">
+            {loadingFieldsText}
+          </p>
+        </template>
+        <lightning-combobox
+          label="Target Field"
+          field-level-help="The field on the target object this mapping writes to."
+          options={targetFieldOptions}
+          value={targetField}
+          onchange={handleTargetFieldChange}
+          class="slds-m-bottom_small"
+        ></lightning-combobox>
+
+        <lightning-combobox
+          label="Data Type"
+          field-level-help="How the source value is coerced before it is written."
+          options={dataTypeOptions}
+          value={dataType}
+          onchange={handleDataTypeChange}
+          class="slds-m-bottom_small"
+        ></lightning-combobox>
+
+        <lightning-combobox
+          label="Transform"
+          field-level-help="An optional conversion applied to the source value."
+          options={transformOptions}
+          value={transform}
+          onchange={handleTransformChange}
+          class="slds-m-bottom_small"
+        ></lightning-combobox>
+
+        <template lwc:if={showTransformArg}>
+          <lightning-input
+            type="text"
+            label="Transform Arg"
+            field-level-help="Required for Reference (Object.ExternalIdField), StaticValue, Concat, BoolMap, IsoToDateInTz."
+            value={transformArg}
+            onchange={handleTransformArgChange}
+            class="slds-m-bottom_small"
+          ></lightning-input>
+        </template>
+
+        <lightning-input
+          type="checkbox"
+          label="External Id"
+          field-level-help="This field carries the external id used to match existing records."
+          checked={isExternalId}
+          onchange={handleExternalIdChange}
+          class="slds-m-bottom_small"
+        ></lightning-input>
+
+        <lightning-input
+          type="checkbox"
+          label="Overwrite Blank"
+          field-level-help="Write the value even when the incoming value is blank."
+          checked={overwriteBlank}
+          onchange={handleOverwriteBlankChange}
+          class="slds-m-bottom_small"
+        ></lightning-input>
+
+        <lightning-input
+          type="checkbox"
+          label="Active"
+          field-level-help="Inactive field mappings are skipped by the sync."
+          checked={active}
+          onchange={handleActiveChange}
+        ></lightning-input>
+      </div>
+
+      <footer class="slds-modal__footer">
+        <lightning-button label="Cancel" onclick={handleCancel}></lightning-button>
+        <lightning-button
+          variant="brand"
+          label="Queue change"
+          onclick={handleQueue}
+          class="slds-m-left_x-small"
+        ></lightning-button>
+      </footer>
+    </div>
+  </section>
+  <div class="slds-backdrop slds-backdrop_open"></div>
+</template>

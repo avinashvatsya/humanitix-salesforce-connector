@@ -4,6 +4,44 @@ The connector's behaviour is **entirely metadata-driven**. Two Custom Metadata
 Types decide where every Humanitix field lands, so you can retarget any field to
 your own object/field **without touching Apex**.
 
+## Editing mappings in the app
+
+The **Mappings** tab of *Humanitix Setup* is the quickest way to work with these
+records. It lists every object mapping, and opening one shows the field mappings
+underneath it. From there you can:
+
+- **Edit an object mapping.** Match Strategy, Update Mode, Match Field Set, Load
+  Order and Is Active.
+- **Edit or create a field mapping.** The target field comes from a picker of the
+  writable fields on that mapping's target object, so an API name can't be
+  mistyped.
+- **Validate before saving.** Your pending changes are checked the same way the
+  sync engine checks the configuration at the start of a run, and the save is
+  blocked while anything is wrong.
+
+Saving starts a Custom Metadata deployment, which Salesforce runs asynchronously,
+so a save takes a few seconds rather than being instant. The page reports the
+outcome once the deployment finishes.
+
+Two things work differently from ordinary records:
+
+**Mappings are deactivated, never deleted.** Apex cannot delete Custom Metadata
+records, and a deleted shipped record would be re-created by the next package
+upgrade in any case. To retire a mapping, clear its **Is Active** checkbox.
+
+**The first save materialises the shipped defaults.** Until an org saves a mapping
+of its own, the tab shows the defaults that ship with the package. The first save
+copies *all* of those defaults into your org as Custom Metadata records with your
+edits applied, and from then on your org's records are what the sync engine
+reads.
+
+Field mappings you create are named for you, as `<Object mapping>_C<NN>`, for
+example `Event_to_Event_C01`. The `C` marks the record as yours, so a package
+upgrade can never collide with it.
+
+The same records stay editable in **Setup → Custom Metadata Types**, and the
+reference below applies to both routes.
+
 ## The two Custom Metadata Types
 
 ### Humanitix Object Mapping

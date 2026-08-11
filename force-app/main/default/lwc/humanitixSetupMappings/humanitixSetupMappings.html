@@ -1,0 +1,216 @@
+<template>
+  <lightning-card title="Mappings" icon-name="standard:data_mapping">
+    <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+      <template lwc:if={isLoading}>
+        <div class="slds-is-relative slds-p-vertical_large">
+          <lightning-spinner alternative-text="Loading mappings" size="small"></lightning-spinner>
+        </div>
+      </template>
+      <template lwc:else>
+        <template lwc:if={showDefaultsBanner}>
+          <div class={bannerClass} role="status">
+            <div class="slds-media__body">
+              <p>{defaultsBannerText}</p>
+            </div>
+          </div>
+        </template>
+
+        <template lwc:if={hasPending}>
+          <div class="slds-box slds-box_x-small slds-m-bottom_medium">
+            <div class="slds-grid slds-grid_vertical-align-center slds-wrap">
+              <p class="slds-m-right_medium">{pendingLabel}</p>
+              <lightning-button
+                label="Validate"
+                onclick={handleValidate}
+                disabled={isBusy}
+              ></lightning-button>
+              <lightning-button
+                variant="brand"
+                label="Save All"
+                onclick={handleSaveAll}
+                disabled={isBusy}
+                class="slds-m-left_x-small"
+              ></lightning-button>
+              <lightning-button
+                label="Discard"
+                onclick={handleDiscard}
+                disabled={isBusy}
+                class="slds-m-left_x-small"
+              ></lightning-button>
+            </div>
+          </div>
+        </template>
+
+        <template lwc:if={deployStatus}>
+          <p class="slds-text-body_small slds-text-color_weak slds-m-bottom_small">
+            {deployStatus}
+          </p>
+        </template>
+
+        <template lwc:if={hasProblems}>
+          <div class={problemClass} role="alert">
+            <div class="slds-media__body">
+              <p class="slds-m-bottom_xx-small">Fix these problems before saving.</p>
+              <ul class="slds-list_dotted">
+                <template for:each={problems} for:item="problem">
+                  <li key={problem}>{problem}</li>
+                </template>
+              </ul>
+            </div>
+          </div>
+        </template>
+
+        <template lwc:if={hasDeployError}>
+          <div class={deployErrorClass} role="alert">
+            <div class="slds-media__body">
+              <p>{deployError}</p>
+            </div>
+          </div>
+        </template>
+
+        <template lwc:if={isFieldView}>
+          <div class="slds-grid slds-grid_vertical-align-center slds-wrap slds-m-bottom_small">
+            <lightning-button
+              label="Back to mappings"
+              icon-name="utility:chevronleft"
+              onclick={handleBack}
+            ></lightning-button>
+            <span class="slds-text-heading_small slds-m-left_small">{fieldViewTitle}</span>
+          </div>
+
+          <div class="slds-m-bottom_small">
+            <lightning-button
+              variant="brand"
+              label="New Field Mapping"
+              onclick={handleNewField}
+            ></lightning-button>
+          </div>
+
+          <template lwc:if={isLoadingFields}>
+            <div class="slds-is-relative slds-p-vertical_large">
+              <lightning-spinner
+                alternative-text="Loading field mappings"
+                size="small"
+              ></lightning-spinner>
+            </div>
+          </template>
+          <template lwc:elseif={hasFieldMappings}>
+            <lightning-datatable
+              key-field="devName"
+              data={fieldMappings}
+              columns={fieldColumns}
+              hide-checkbox-column
+              onrowaction={handleFieldRowAction}
+            ></lightning-datatable>
+          </template>
+          <template lwc:else>
+            <p class="slds-text-color_weak">
+              This mapping has no field mappings yet. Use New Field Mapping to add one.
+            </p>
+          </template>
+        </template>
+
+        <template lwc:else>
+          <template lwc:if={hasObjectMappings}>
+            <lightning-datatable
+              key-field="devName"
+              data={objectMappings}
+              columns={objectColumns}
+              hide-checkbox-column
+              onrowaction={handleObjectRowAction}
+            ></lightning-datatable>
+          </template>
+          <template lwc:else>
+            <p class="slds-text-color_weak">No mappings found.</p>
+          </template>
+
+          <template lwc:if={showEditPanel}>
+            <div class="slds-box slds-m-top_medium">
+              <h3 class="slds-text-heading_small slds-m-bottom_small">{editHeading}</h3>
+
+              <dl class="slds-dl_horizontal slds-m-bottom_small">
+                <dt class="slds-dl_horizontal__label">Resource</dt>
+                <dd class="slds-dl_horizontal__detail">{editResource}</dd>
+                <dt class="slds-dl_horizontal__label">Target Object</dt>
+                <dd class="slds-dl_horizontal__detail">{editTargetSObject}</dd>
+                <dt class="slds-dl_horizontal__label">External Id Field</dt>
+                <dd class="slds-dl_horizontal__detail">{editExternalIdField}</dd>
+              </dl>
+
+              <lightning-combobox
+                label="Match Strategy"
+                field-level-help="How an incoming record is matched to an existing Salesforce record."
+                options={matchStrategyOptions}
+                value={editMatchStrategy}
+                onchange={handleMatchStrategyChange}
+                class="slds-m-bottom_small"
+              ></lightning-combobox>
+
+              <lightning-combobox
+                label="Update Mode"
+                field-level-help="Always overwrites existing values, BlanksOnly fills empty fields, Never leaves existing records untouched."
+                options={updateModeOptions}
+                value={editUpdateMode}
+                onchange={handleUpdateModeChange}
+                class="slds-m-bottom_small"
+              ></lightning-combobox>
+
+              <lightning-input
+                type="text"
+                label="Match Field Set"
+                field-level-help="Comma separated target field API names used by MatchByFields."
+                value={editMatchFieldSet}
+                onchange={handleMatchFieldSetChange}
+                class="slds-m-bottom_small"
+              ></lightning-input>
+
+              <lightning-input
+                type="number"
+                label="Load Order"
+                field-level-help="Lower numbers run first, so parent records are created before the records that reference them."
+                value={editLoadOrder}
+                onchange={handleLoadOrderChange}
+                class="slds-m-bottom_small"
+              ></lightning-input>
+
+              <lightning-input
+                type="checkbox"
+                label="Active"
+                field-level-help="Inactive mappings are skipped by every sync run."
+                checked={editActive}
+                onchange={handleActiveChange}
+                class="slds-m-bottom_small"
+              ></lightning-input>
+
+              <lightning-button
+                variant="brand"
+                label="Queue change"
+                onclick={handleQueueObject}
+              ></lightning-button>
+              <lightning-button
+                label="Cancel"
+                onclick={handleCancelEdit}
+                class="slds-m-left_x-small"
+              ></lightning-button>
+            </div>
+          </template>
+        </template>
+
+        <p class="slds-text-body_small slds-text-color_weak slds-m-top_medium">
+          Mappings cannot be deleted here. Deactivate a mapping to stop it from running. If you
+          delete a shipped mapping in Setup, the next upgrade recreates it.
+        </p>
+      </template>
+    </div>
+  </lightning-card>
+
+  <template lwc:if={showFieldForm}>
+    <c-humanitix-mapping-field-form
+      mapping={fieldFormMapping}
+      parent-dev-name={selectedDevName}
+      target-s-object={selectedTargetSObject}
+      onqueue={handleFieldQueue}
+      oncancel={handleFieldFormCancel}
+    ></c-humanitix-mapping-field-form>
+  </template>
+</template>
