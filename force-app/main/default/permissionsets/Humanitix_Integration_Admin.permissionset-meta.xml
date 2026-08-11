@@ -84,6 +84,26 @@
         <apexClass>HumanitixSyncAdminController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixCredentialService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixConnectionController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixMetadataWriter</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixSyncSettingsController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixScheduleController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
     <description>Full access to configure and run the Humanitix connector. Assigning this activates the API callout principal.</description>
     <externalCredentialPrincipalAccesses>
         <externalCredentialPrincipal>HumanitixAPI-Humanitix_Named_Principal</externalCredentialPrincipal>
@@ -900,6 +920,31 @@
         <editable>true</editable>
     </fieldPermissions>
     <fieldPermissions>
+        <field>Humanitix_Metadata_Deploy__c.Deploy_Job_Id__c</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <field>Humanitix_Metadata_Deploy__c.Status__c</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <field>Humanitix_Metadata_Deploy__c.Purpose__c</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <field>Humanitix_Metadata_Deploy__c.Error_Detail__c</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <field>Humanitix_Metadata_Deploy__c.Completed_At__c</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>
+    <fieldPermissions>
         <field>Campaign.Humanitix_Event_Id__c</field>
         <readable>true</readable>
         <editable>true</editable>
@@ -1098,6 +1143,15 @@
     </objectPermissions>
     <objectPermissions>
         <object>Humanitix_Sync_State__c</object>
+        <allowCreate>true</allowCreate>
+        <allowRead>true</allowRead>
+        <allowEdit>true</allowEdit>
+        <allowDelete>true</allowDelete>
+        <viewAllRecords>true</viewAllRecords>
+        <modifyAllRecords>true</modifyAllRecords>
+    </objectPermissions>
+    <objectPermissions>
+        <object>Humanitix_Metadata_Deploy__c</object>
         <allowCreate>true</allowCreate>
         <allowRead>true</allowRead>
         <allowEdit>true</allowEdit>

@@ -87,4 +87,41 @@ private class HumanitixSyncLauncherTest {
         Test.stopTest();
         System.assertEquals(1, [SELECT COUNT() FROM CronTrigger WHERE Id = :jobId]);
     }
+
+    @IsTest
+    static void fullModeOverridesIncrementalConfig() {
+        HumanitixSyncConfig.overrideSetting = new Humanitix_Sync_Setting__mdt(Since_Mode__c = 'Modified');
+        Test.startTest();
+        HumanitixSyncLauncher.start('Scheduled', HumanitixSyncLauncher.MODE_FULL);
+        Test.stopTest();
+        System.assertEquals(false, HumanitixSyncLauncher.lastState.incremental, 'Full mode must force a full pull');
+    }
+
+    @IsTest
+    static void deltaModeOverridesFullPullConfig() {
+        HumanitixSyncConfig.overrideSetting = new Humanitix_Sync_Setting__mdt(Since_Mode__c = 'FullPull');
+        Test.startTest();
+        HumanitixSyncLauncher.start('Scheduled', HumanitixSyncLauncher.MODE_DELTA);
+        Test.stopTest();
+        System.assertEquals(true, HumanitixSyncLauncher.lastState.incremental, 'Delta mode must force incremental');
+    }
+
+    @IsTest
+    static void nullModeFollowsConfig() {
+        HumanitixSyncConfig.overrideSetting = new Humanitix_Sync_Setting__mdt(Since_Mode__c = 'FullPull');
+        Test.startTest();
+        HumanitixSyncLauncher.start('Manual');
+        Test.stopTest();
+        System.assertEquals(false, HumanitixSyncLauncher.lastState.incremental, 'No mode must follow Since_Mode__c');
+    }
+
+    @IsTest
+    static void schedulerCarriesItsModeIntoTheRun() {
+        HumanitixSyncConfig.overrideSetting = new Humanitix_Sync_Setting__mdt(Since_Mode__c = 'Modified');
+        Test.startTest();
+        new HumanitixSyncScheduler(HumanitixSyncLauncher.MODE_FULL).execute(null);
+        Test.stopTest();
+        System.assertEquals(false, HumanitixSyncLauncher.lastState.incremental, 'Daily full job must run full');
+        System.assertEquals(1, [SELECT COUNT() FROM Humanitix_Sync_Log__c WHERE Trigger_Source__c = 'Scheduled']);
+    }
 }
