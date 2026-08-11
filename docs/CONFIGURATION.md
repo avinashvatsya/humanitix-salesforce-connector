@@ -2,8 +2,25 @@
 
 ## 1. Enter your Humanitix API key (required)
 
-The key is stored encrypted in an **External Credential** — never in code or
-metadata. You enter it once, in Setup:
+The key is stored encrypted in an **External Credential**, never in code or
+metadata. You enter it once.
+
+### From the Humanitix Setup tab (recommended)
+
+1. Open the *Humanitix Integration* app and go to the **Humanitix Setup** tab.
+2. Select the **Connection** tab.
+3. Paste your Humanitix API key into **Humanitix API Key**, then click **Save Key**.
+4. Click **Test Connection**. A green result showing `HTTP 200` means you are
+   connected.
+
+Saving from this page writes to the external credential principal, which in some
+orgs requires the **Customize Application** permission. If the page reports that
+it cannot save or read the key, use the manual path below. The manual path always
+works.
+
+### If the page cannot save the key in your org
+
+Enter the key directly in Setup:
 
 1. **Setup → Security → Named Credentials → External Credentials** tab → open
    **Humanitix API**.
@@ -16,7 +33,11 @@ metadata. You enter it once, in Setup:
    - *Allow Formulas in HTTP Header* = **checked**
    - Custom header `x-api-key` = `{!$Credential.HumanitixAPI.ApiKey}`
 
-Verify with **Setup → Developer Console → Debug → Open Execute Anonymous**:
+### Verifying from the command line
+
+**Test Connection** on the Connection tab is the quickest check. If you prefer
+Apex, run the same probe from **Setup → Developer Console → Debug → Open Execute
+Anonymous**:
 
 ```apex
 System.debug(new HumanitixHttpClient().get('/v1/events?page=1').getStatusCode()); // expect 200

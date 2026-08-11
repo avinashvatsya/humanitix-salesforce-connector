@@ -5,5 +5,10 @@
         <c-humanitix-setup-dashboard></c-humanitix-setup-dashboard>
       </template>
     </lightning-tab>
+    <lightning-tab label="Connection" value="connection" onactive={handleTabActive}>
+      <template lwc:if={visited.connection}>
+        <c-humanitix-setup-connection></c-humanitix-setup-connection>
+      </template>
+    </lightning-tab>
   </lightning-tabset>
 </template>
