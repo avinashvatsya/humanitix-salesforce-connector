@@ -23,7 +23,7 @@ jobs:
           node-version: '20'
 
       - name: Install npm dependencies
-        run: npm install
+        run: npm ci
 
       # Advisory: run `npm run prettier` locally once to normalize formatting.
       # Non-blocking so generated metadata doesn't fail the gate before the first
