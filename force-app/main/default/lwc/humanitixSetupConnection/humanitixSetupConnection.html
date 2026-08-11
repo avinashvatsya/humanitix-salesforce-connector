@@ -1,0 +1,88 @@
+<template>
+  <lightning-card title="API Connection" icon-name="standard:connected_apps">
+    <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+      <div class="slds-is-relative slds-m-bottom_medium">
+        <template lwc:if={isLoadingStatus}>
+          <div class="slds-p-vertical_large">
+            <lightning-spinner alternative-text="Checking key status" size="small"></lightning-spinner>
+          </div>
+        </template>
+        <template lwc:else>
+          <div class="slds-media slds-media_center">
+            <div class="slds-media__figure">
+              <lightning-icon
+                icon-name={statusIcon}
+                variant={statusVariant}
+                size="x-small"
+              ></lightning-icon>
+            </div>
+            <div class="slds-media__body">
+              <p>{statusText}</p>
+              <template lwc:if={showStatusDetail}>
+                <p class="slds-text-body_small slds-text-color_weak">{statusDetail}</p>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <div class="slds-is-relative slds-m-bottom_medium">
+        <lightning-input
+          type="password"
+          label="Humanitix API Key"
+          field-level-help="Paste the API key from your Humanitix account settings. It is stored encrypted and never shown again."
+          value={apiKey}
+          onchange={handleKeyChange}
+          class="slds-m-bottom_small"
+        ></lightning-input>
+        <lightning-button
+          variant="brand"
+          label="Save Key"
+          onclick={handleSave}
+          disabled={saveDisabled}
+        ></lightning-button>
+        <template lwc:if={isSaving}>
+          <lightning-spinner alternative-text="Saving key" size="small"></lightning-spinner>
+        </template>
+      </div>
+
+      <div class="slds-is-relative slds-m-bottom_medium">
+        <lightning-button
+          variant="neutral"
+          label="Test Connection"
+          icon-name="utility:broadcast"
+          onclick={handleTest}
+          disabled={isTesting}
+        ></lightning-button>
+        <template lwc:if={isTesting}>
+          <lightning-spinner alternative-text="Testing connection" size="small"></lightning-spinner>
+        </template>
+      </div>
+
+      <template lwc:if={hasTestResult}>
+        <div class={testNotificationClass} role="status">
+          <div class="slds-media__body">
+            <p>{testMessage}</p>
+          </div>
+        </div>
+      </template>
+
+      <template lwc:if={showManualSteps}>
+        <div class="slds-box slds-box_x-small slds-m-top_medium">
+          <h3 class="slds-text-heading_small slds-m-bottom_x-small">
+            Enter the key manually in Setup
+          </h3>
+          <ol class="slds-list_ordered slds-p-left_medium">
+            <li>Open Setup, then Security, then Named Credentials.</li>
+            <li>Select the External Credentials tab and open Humanitix API.</li>
+            <li>Under Principals, open Humanitix_Named_Principal.</li>
+            <li>
+              Under Authentication Parameters, add a parameter named exactly ApiKey, paste your
+              Humanitix API key as its value, and save.
+            </li>
+          </ol>
+        </div>
+      </template>
+    </div>
+  </lightning-card>
+</template>

@@ -76,10 +76,22 @@ exists, the org's records are authoritative.
 1. **Assign the permission set.** Setup → Permission Sets →
    **Humanitix Integration Admin** → *Manage Assignments* → add the user(s) who
    will run the sync. This also activates the API callout principal.
-2. **Enter your API key** and confirm the running user is a Marketing User —
-   see **[CONFIGURATION.md](CONFIGURATION.md)**.
-3. **Smoke-test and run** — from the *Humanitix Integration* app → *Humanitix
-   Setup* tab, click **Run Sync Now**, or schedule a recurring run.
+2. **Enter your API key.** Open the *Humanitix Integration* app → *Humanitix
+   Setup* tab → **Connection** tab, paste your Humanitix API key, and click
+   **Save Key**. If your org will not let the page save the key, enter it in
+   Setup instead; the fallback steps and the Marketing User requirement are both
+   in **[CONFIGURATION.md](CONFIGURATION.md)**.
+3. **Verify the connection.** Still on the **Connection** tab, click **Test
+   Connection**. A green result showing `HTTP 200` confirms both the key and the
+   callout principal. `401` or `403` means the key is wrong or the permission set
+   isn't assigned. From the CLI, the same probe runs as anonymous Apex:
+
+   ```bash
+   echo "System.debug(new HumanitixHttpClient().get('/v1/events?page=1').getStatusCode());" | sf apex run --target-org <your-org>
+   ```
+
+4. **Run the sync.** From the *Humanitix Setup* tab, click **Run Sync Now**, or
+   schedule a recurring run.
 
 ## Upgrading / installing over an existing source deploy
 
