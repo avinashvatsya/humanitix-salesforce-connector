@@ -1,0 +1,108 @@
+<template>
+  <lightning-card title="Schedule" icon-name="standard:date_time">
+    <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+      <template lwc:if={isLoading}>
+        <div class="slds-is-relative slds-p-vertical_large">
+          <lightning-spinner alternative-text="Loading schedule" size="small"></lightning-spinner>
+        </div>
+      </template>
+      <template lwc:else>
+        <template lwc:if={drift}>
+          <div class={driftClass} role="alert">
+            <div class="slds-media__body">
+              <p>The scheduled jobs do not match the saved schedule. Save again to repair them.</p>
+              <lightning-button
+                variant="neutral"
+                label="Repair schedule"
+                onclick={handleRepair}
+                disabled={isSaving}
+                class="slds-m-top_x-small"
+              ></lightning-button>
+            </div>
+          </div>
+        </template>
+
+        <lightning-combobox
+          label="Delta sync interval"
+          field-level-help="Incremental runs that pull only changes since the last successful sync. Sub hourly intervals use several scheduled jobs."
+          options={intervalOptions}
+          value={deltaValue}
+          disabled={isSaving}
+          onchange={handleIntervalChange}
+          class="slds-m-bottom_small"
+        ></lightning-combobox>
+
+        <lightning-input
+          type="time"
+          label="Daily full sync time"
+          field-level-help="One full refresh per day at this time as a safety net. Leave empty to turn the daily run off."
+          value={dailyTime}
+          disabled={isSaving}
+          onchange={handleDailyTimeChange}
+          class="slds-m-bottom_small"
+        ></lightning-input>
+
+        <p class="slds-text-body_small slds-text-color_weak">
+          Times use the Salesforce timezone of the user who saves. A run that is still in flight when
+          the next fire time arrives is skipped.
+        </p>
+
+        <template lwc:if={showCollisionWarning}>
+          <div class={collisionClass} role="status">
+            <div class="slds-media__body">
+              <p>
+                The daily run and an interval run fire at the same minute, so one of them will be
+                skipped. Choose an offset minute such as 02:05.
+              </p>
+            </div>
+          </div>
+        </template>
+
+        <div class="slds-is-relative slds-m-top_medium">
+          <lightning-button
+            variant="brand"
+            label="Save Schedule"
+            onclick={handleSave}
+            disabled={isSaving}
+          ></lightning-button>
+          <template lwc:if={isSaving}>
+            <lightning-spinner alternative-text="Saving schedule" size="small"></lightning-spinner>
+          </template>
+        </div>
+
+        <div class="slds-m-top_large">
+          <h3 class="slds-text-heading_small slds-m-bottom_x-small">Current jobs</h3>
+          <template lwc:if={hasManagedJobs}>
+            <lightning-datatable
+              key-field="name"
+              data={managedJobs}
+              columns={columns}
+              hide-checkbox-column
+            ></lightning-datatable>
+          </template>
+          <template lwc:else>
+            <p class="slds-text-color_weak">
+              No scheduled jobs. Save an interval or daily time to create them.
+            </p>
+          </template>
+        </div>
+
+        <template lwc:if={hasUnmanagedJobs}>
+          <div class={unmanagedClass} role="status">
+            <div class="slds-media__body">
+              <p>
+                This job was scheduled outside this page. Cancel it in Setup, Scheduled Jobs, to
+                avoid duplicate runs.
+              </p>
+              <ul class="slds-list_dotted slds-m-top_xx-small">
+                <template for:each={unmanagedJobs} for:item="job">
+                  <li key={job.name}>{job.name} ({job.cron})</li>
+                </template>
+              </ul>
+            </div>
+          </div>
+        </template>
+      </template>
+    </div>
+  </lightning-card>
+</template>

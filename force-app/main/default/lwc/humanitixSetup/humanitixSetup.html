@@ -15,5 +15,10 @@
         <c-humanitix-setup-sync-settings></c-humanitix-setup-sync-settings>
       </template>
     </lightning-tab>
+    <lightning-tab label="Schedule" value="schedule" onactive={handleTabActive}>
+      <template lwc:if={visited.schedule}>
+        <c-humanitix-setup-schedule></c-humanitix-setup-schedule>
+      </template>
+    </lightning-tab>
   </lightning-tabset>
 </template>

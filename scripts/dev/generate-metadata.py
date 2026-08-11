@@ -34,6 +34,9 @@ ADMIN_APEX_CLASSES = [
     "HumanitixSyncConfig", "HumanitixSyncState", "HumanitixSyncStateService",
     "HumanitixSyncLogService", "HumanitixSyncQueueable", "HumanitixSyncLauncher",
     "HumanitixSyncScheduler", "HumanitixSyncInvocable", "HumanitixSyncAdminController",
+    "HumanitixCredentialService", "HumanitixConnectionController",
+    "HumanitixMetadataWriter", "HumanitixSyncSettingsController",
+    "HumanitixScheduleController",
 ]
 ADMIN_TABS = ["Humanitix_Sync_Log__c", "Humanitix_Setup"]
 USER_TABS = ["Humanitix_Sync_Log__c"]
@@ -164,7 +167,9 @@ def object_xml(o):
     lines.append("    <enableActivities>false</enableActivities>")
     lines.append("    <enableHistory>false</enableHistory>")
     lines.append("    <enableReports>true</enableReports>")
-    lines.append("    <enableSearch>true</enableSearch>")
+    # Internal ledgers opt out of global search: nothing on them is worth finding
+    # by keyword, and they would only clutter subscribers' search results.
+    lines.append(f"    <enableSearch>{'true' if o.get('enableSearch', True) else 'false'}</enableSearch>")
     lines.append(f"    <label>{esc(o['label'])}</label>")
     lines.append(f"    <pluralLabel>{esc(o['plural'])}</pluralLabel>")
     nf = o["nameField"]
@@ -195,8 +200,8 @@ def extid(api, label=None):
     return dict(api=api, type="text", length=255, externalId=True, unique=True,
                 label=label, helpText="Humanitix identifier. Used as the idempotent upsert key.")
 
-def LT(api, label=None, length=32768):
-    return dict(api=api, type="longtext", length=length, label=label)
+def LT(api, label=None, length=32768, **kw):
+    return dict(api=api, type="longtext", length=length, label=label, **kw)
 
 def NUM(api, precision=18, scale=0, label=None):
     return dict(api=api, type="number", precision=precision, scale=scale, label=label)
@@ -378,12 +383,36 @@ OBJECTS["Humanitix_Sync_State__c"] = dict(
         NUM("Last_Page__c", precision=9),
     ])
 
+# Admin-only ledger: one row per async Metadata.Operations deployment started
+# from the Setup UI. A DeployCallback stamps Status/Error Detail/Completed At so
+# the LWC can poll for the outcome. Deliberately absent from user_visible_objs
+# and from both tab lists — admins reach it through the Setup pages, not a tab.
+OBJECTS["Humanitix_Metadata_Deploy__c"] = dict(
+    label="Humanitix Metadata Deploy", plural="Humanitix Metadata Deploys",
+    nameField=dict(type="AutoNumber", label="Deploy", format="MDD-{000000}"),
+    enableSearch=False,
+    fields=[
+        dict(api="Deploy_Job_Id__c", type="text", length=18, externalId=True, unique=True,
+             label="Deploy Job Id",
+             helpText="Async job id returned by Metadata.Operations.enqueueDeployment."),
+        T("Status__c", length=40, label="Status", helpText="Pending, Succeeded, or Failed."),
+        T("Purpose__c", length=80, label="Purpose",
+          helpText="Which Setup page started this deployment, e.g. Sync Settings or Mappings."),
+        LT("Error_Detail__c", "Error Detail", visibleLines=3),
+        DT("Completed_At__c"),
+    ])
+
 # ---- Custom setting -------------------------------------------------------
 SETTING = dict(
     label="Humanitix Sync Toggle", customSetting=True,
     fields=[
         dict(api="Sync_Enabled__c", type="checkbox", default=True, label="Sync Enabled"),
-        T("Schedule_Cron__c", length=80, label="Schedule Cron"),
+        # Desired schedule state written by the Setup UI's Schedule tab; the
+        # actual schedule is the managed CronTriggers HumanitixScheduleController
+        # creates from these values. Hierarchy custom settings can't hold
+        # picklist/Time fields, hence Number + "HH:mm" Text.
+        NUM("Delta_Interval_Minutes__c", precision=4, scale=0, label="Delta Interval Minutes"),
+        T("Daily_Full_Sync_Time__c", length=5, label="Daily Full Sync Time"),
     ])
 
 # ---- Custom Metadata Types ------------------------------------------------

@@ -6,7 +6,24 @@
 public with sharing class HumanitixSyncLauncher {
     public class LaunchException extends Exception {}
 
+    /** Per-run mode overrides for start(). Null follows Since_Mode__c. */
+    public static final String MODE_FULL = 'Full';
+    public static final String MODE_DELTA = 'Delta';
+
+    @TestVisible
+    private static HumanitixSyncState lastState;
+
     public static Id start(String triggerSource) {
+        return start(triggerSource, null);
+    }
+
+    /**
+     * runMode MODE_FULL forces a full pull for this run, MODE_DELTA forces
+     * incremental, null keeps the configured Since_Mode__c behaviour. The
+     * schedule uses this so the daily job refreshes everything while interval
+     * jobs stay incremental; manual and Flow runs pass null.
+     */
+    public static Id start(String triggerSource, String runMode) {
         if (!HumanitixSyncConfig.syncEnabled()) {
             throw new LaunchException('Humanitix sync is disabled (Humanitix Sync Toggle > Sync Enabled).');
         }
@@ -39,9 +56,12 @@ public with sharing class HumanitixSyncLauncher {
         st.ticketStatusFilter = HumanitixSyncConfig.ticketStatusFilter();
         st.maxRetries = HumanitixSyncConfig.maxRetries();
         st.retryDelayMinutes = HumanitixSyncConfig.retryDelayMinutes();
-        st.incremental = HumanitixSyncConfig.incrementalEnabled();
+        st.incremental = MODE_FULL.equals(runMode)
+            ? false
+            : (MODE_DELTA.equals(runMode) ? true : HumanitixSyncConfig.incrementalEnabled());
         st.namedCredential = HumanitixSyncConfig.namedCredentialName();
 
+        lastState = st;
         if (!Test.isRunningTest()) {
             System.enqueueJob(new HumanitixSyncQueueable(st));
         }
