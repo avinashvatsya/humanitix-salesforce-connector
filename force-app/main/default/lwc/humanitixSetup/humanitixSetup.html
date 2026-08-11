@@ -20,5 +20,10 @@
         <c-humanitix-setup-schedule></c-humanitix-setup-schedule>
       </template>
     </lightning-tab>
+    <lightning-tab label="Mappings" value="mappings" onactive={handleTabActive}>
+      <template lwc:if={visited.mappings}>
+        <c-humanitix-setup-mappings></c-humanitix-setup-mappings>
+      </template>
+    </lightning-tab>
   </lightning-tabset>
 </template>

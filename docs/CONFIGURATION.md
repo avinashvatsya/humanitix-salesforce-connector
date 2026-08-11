@@ -55,7 +55,30 @@ sure that user qualifies.
 
 ## 3. Sync settings
 
-Edit **Setup → Custom Metadata Types → Humanitix Sync Setting → Manage Records →
+### From the Humanitix Setup tab (recommended)
+
+Open the **Humanitix Setup** tab and select **Sync Settings**. The form edits the
+same `Default` record described below: **Page Size**, **Enabled Resources**,
+**Future events only**, **Ticket Status Filter**, **Max Retries**, **Retry Delay
+Minutes**, **Since Mode** and **Named Credential Name**. If your org has no
+settings record yet, the form shows the values the connector is currently using
+and saving creates the record.
+
+**Save Settings** starts a Custom Metadata deployment, which Salesforce runs
+asynchronously, so a save takes a few seconds rather than being instant. The page
+waits for that deployment and then confirms it, or shows the error the deployment
+reported. If the page tells you the deployment is taking longer than expected,
+check **Setup → Deployment Status**.
+
+The **Sync Enabled** toggle at the top of the same tab is the kill switch, and it
+is saved on its own, not through that deployment: see
+[Kill switch](#4-kill-switch).
+
+### From Setup (fallback and advanced)
+
+The record can always be edited directly, and this is the only way to change the
+settings the form does not show, such as **Consecutive Failure Threshold**. Edit
+**Setup → Custom Metadata Types → Humanitix Sync Setting → Manage Records →
 Default**:
 
 | Field | Default | Purpose |
@@ -85,26 +108,73 @@ If the spike reports that `since` filters on *created* time (or is unclear), set
 
 ## 4. Kill switch
 
-**Setup → Custom Settings → Humanitix Sync Toggle → Manage → New** (org default) →
-uncheck **Sync Enabled** to immediately stop new and in-flight runs. Defaults to
-enabled when no record exists.
+**Humanitix Setup → Sync Settings → Sync Enabled** stops all sync activity.
+Unlike the rest of that form it is saved on its own and takes effect immediately:
+scheduled and manual runs will not start, and a run already in flight stops at
+its next step. Switch it back on to let runs start again.
+
+The toggle is the org default of the **Humanitix Sync Toggle** custom setting, so
+you can also set it from **Setup → Custom Settings → Humanitix Sync Toggle →
+Manage → New** (org default) → uncheck **Sync Enabled**. Sync counts as enabled
+when no record exists.
 
 ## 5. Running the sync
 
-- **On demand:** *Humanitix Integration* app → *Humanitix Setup* tab → **Run Sync Now**.
-- **Scheduled:** Execute Anonymous (or a Setup → Scheduled Jobs entry):
-  ```apex
-  HumanitixSyncScheduler.schedule('Humanitix Nightly Sync', '0 0 2 * * ?'); // daily 02:00
-  ```
+- **On demand:** *Humanitix Integration* app → *Humanitix Setup* tab →
+  **Dashboard** → **Run Sync Now**. The same tab lists the recent runs with their
+  status and totals.
+- **Scheduled:** *Humanitix Setup* tab → **Schedule**, described below.
 - **From a Flow / Agentforce:** add the **Run Humanitix Sync** invocable action.
 
 Monitor runs on the **Humanitix Sync Logs** tab — each run has a header (status,
 totals) and per-resource/per-event entries with any error messages.
 
+### Scheduling from the Schedule tab
+
+The **Schedule** tab has two settings and creates the scheduled jobs for you:
+
+- **Delta sync interval:** Off, every 15 minutes, 30 minutes, 1 hour, 2 hours,
+  4 hours, 6 hours or 12 hours. Intervals under an hour need one scheduled job
+  per fire minute, so the tab creates up to four jobs, named **Humanitix Delta
+  Sync 1** through **Humanitix Delta Sync 4**.
+- **Daily full sync time:** a 24 hour `HH:mm` time creates one job named
+  **Humanitix Daily Full Sync**. Leave it empty for no daily run.
+
+Interval runs are always incremental and the daily run always re-pulls
+everything, whatever **Since Mode** is set to. Manual runs and Flow runs keep
+following **Since Mode** (section 3), so the daily job is your safety net if
+incremental sync ever misses an edit.
+
+Also worth knowing:
+
+- Cron times use the Salesforce timezone of the user who saves the schedule.
+- A run still in flight when the next fire time arrives is skipped, so runs never
+  stack up behind a slow one. The tab warns you before you save if the daily time
+  falls on the same minute as an interval run.
+- **Current jobs** lists the jobs the tab manages, with their cron expression,
+  next run time and state. If those jobs stop matching the saved schedule, the
+  tab shows a **Repair schedule** button that recreates them.
+- Any other scheduled job whose name starts with `Humanitix`, for example a
+  **Humanitix Nightly Sync** job that earlier versions of these docs had you
+  create by hand, is listed separately as scheduled outside the page. Cancel it
+  in **Setup → Scheduled Jobs** so it does not trigger a second, duplicate run.
+
+### Advanced: scheduling from Apex
+
+Scheduling from Execute Anonymous still works:
+
+```apex
+HumanitixSyncScheduler.schedule('Humanitix Nightly Sync', '0 0 2 * * ?'); // daily 02:00
+```
+
+A job created this way follows **Since Mode** rather than being forced full or
+incremental, and the Schedule tab reports it as a job it does not manage.
+
 ## 6. Changing what maps where
 
 All object/field bindings live in Custom Metadata and are fully remappable with no
-code. See **[FIELD-MAPPING.md](FIELD-MAPPING.md)**.
+code, either from the **Mappings** tab of *Humanitix Setup* or in Setup itself.
+See **[FIELD-MAPPING.md](FIELD-MAPPING.md)**.
 
 ### Choosing how buyer Contacts are matched
 

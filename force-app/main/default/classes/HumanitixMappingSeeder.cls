@@ -45,6 +45,15 @@ public with sharing class HumanitixMappingSeeder implements Queueable {
         return Metadata.Operations.enqueueDeployment(container, new Callback());
     }
 
+    /**
+     * All shipped default records missing from this org. Public for the
+     * mappings editor: its first save on an unseeded org must materialize
+     * every default alongside the edits in one atomic deployment.
+     */
+    public static List<HumanitixDefaultMappings.DefaultRecord> missingDefaults() {
+        return missingRecords(existingFullNames());
+    }
+
     /** DeveloperNames (as Type.DeveloperName) already present in this org. */
     @TestVisible
     private static Set<String> existingFullNames() {
