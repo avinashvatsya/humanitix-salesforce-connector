@@ -4,8 +4,8 @@
       "path": "force-app",
       "default": true,
       "package": "Humanitix Salesforce Connector",
-      "versionName": "Version 1.0",
-      "versionNumber": "1.0.0.NEXT",
+      "versionName": "Version 1.1",
+      "versionNumber": "1.1.0.NEXT",
       "versionDescription": "Open-source read-only connector that syncs Humanitix events, orders, tickets and tags into Salesforce.",
       "definitionFile": "config/package-build-def.json"
     }
