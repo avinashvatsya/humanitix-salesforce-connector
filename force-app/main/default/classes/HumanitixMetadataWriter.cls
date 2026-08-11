@@ -33,10 +33,18 @@ public with sharing class HumanitixMetadataWriter {
     }
 
     /**
-     * Enqueue an async deployment of the given records and insert a Pending
-     * ledger row keyed by the deploy job id. Returns the job id (null in tests).
+     * Enqueue an async deployment of the given records. Returns a tracking
+     * token (null in tests) the UI polls getDeployStatus with.
+     *
+     * Two platform constraints shape this: enqueueDeployment creates a
+     * DeployRequest (a setup object), so writing the ledger row in this
+     * transaction would be MIXED_DML; and the id enqueueDeployment returns
+     * (DeployRequest, 0Af) is not the id the callback sees from
+     * getCallbackJobId() (AsyncApexJob, 707). So the ledger key is a token we
+     * generate here and serialize into the callback, which writes the row in
+     * its own transaction; until then a missing row means Pending.
      */
-    public static Id deploy(List<Metadata.CustomMetadata> records, String purpose) {
+    public static String deploy(List<Metadata.CustomMetadata> records, String purpose) {
         Metadata.DeployContainer container = new Metadata.DeployContainer();
         for (Metadata.CustomMetadata r : records) {
             container.addMetadata(r);
@@ -46,13 +54,10 @@ public with sharing class HumanitixMetadataWriter {
         if (Test.isRunningTest()) {
             return null; // enqueueDeployment is not permitted in test context
         }
-        Id jobId = Metadata.Operations.enqueueDeployment(container, new StatusCallback());
-        insert new Humanitix_Metadata_Deploy__c(
-            Deploy_Job_Id__c = String.valueOf(jobId),
-            Status__c = 'Pending',
-            Purpose__c = purpose
-        );
-        return jobId;
+        String token = 'MDD-' + String.valueOf(Datetime.now().getTime()) + '-' +
+            String.valueOf(Math.abs(Crypto.getRandomInteger()));
+        Metadata.Operations.enqueueDeployment(container, new StatusCallback(token, purpose));
+        return token;
     }
 
     /** Polled by the Setup UI after a save. Returns null while the ledger row is not yet visible. */
@@ -70,11 +75,18 @@ public with sharing class HumanitixMetadataWriter {
         return rows.isEmpty() ? null : rows[0];
     }
 
-    /** Runs in its own async context when the deployment finishes; DML is permitted there. */
+    /** Runs in its own async transaction when the deployment finishes; DML is permitted there. */
     public class StatusCallback implements Metadata.DeployCallback {
+        private String deployToken;
+        private String purpose;
+
+        public StatusCallback(String deployToken, String purpose) {
+            this.deployToken = deployToken;
+            this.purpose = purpose;
+        }
+
         public void handleResult(Metadata.DeployResult result, Metadata.DeployCallbackContext ctx) {
-            Id jobId = ctx == null ? null : ctx.getCallbackJobId();
-            if (jobId == null) {
+            if (String.isBlank(deployToken)) {
                 return;
             }
             Boolean ok = result != null && result.status == Metadata.DeployStatus.SUCCEEDED;
@@ -87,15 +99,16 @@ public with sharing class HumanitixMetadataWriter {
             if (!ok && String.isBlank(detail) && result != null) {
                 detail = 'Deployment status: ' + String.valueOf(result.status);
             }
-            upsertStatus(String.valueOf(jobId), ok ? 'Succeeded' : 'Failed', detail);
+            upsertStatus(deployToken, ok ? 'Succeeded' : 'Failed', purpose, detail);
         }
     }
 
     @TestVisible
-    private static void upsertStatus(String jobId, String status, String detail) {
+    private static void upsertStatus(String jobId, String status, String purpose, String detail) {
         Humanitix_Metadata_Deploy__c row = new Humanitix_Metadata_Deploy__c(
             Deploy_Job_Id__c = jobId,
             Status__c = status,
+            Purpose__c = purpose,
             Error_Detail__c = String.isBlank(detail) ? null : detail.abbreviate(32768),
             Completed_At__c = Datetime.now()
         );

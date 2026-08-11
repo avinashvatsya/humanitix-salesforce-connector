@@ -68,13 +68,12 @@ public with sharing class HumanitixSyncSettingsController {
             'Named_Credential_Name__c' => String.isBlank(dto.namedCredentialName) ? null : dto.namedCredentialName.trim()
         };
         try {
-            Id jobId = HumanitixMetadataWriter.deploy(
+            return HumanitixMetadataWriter.deploy(
                 new List<Metadata.CustomMetadata>{
                     HumanitixMetadataWriter.record(RECORD_FULL_NAME, RECORD_LABEL, values)
                 },
                 'Sync Settings'
             );
-            return jobId == null ? null : String.valueOf(jobId);
         } catch (Exception e) {
             throw new AuraHandledException('The settings deployment could not be started: ' + e.getMessage());
         }
