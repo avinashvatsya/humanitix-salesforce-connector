@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>Schedule_Cron__c</fullName>
-    <label>Schedule Cron</label>
-    <type>Text</type>
-    <length>80</length>
+    <fullName>Completed_At__c</fullName>
+    <label>Completed At</label>
+    <type>DateTime</type>
     <required>false</required>
 </CustomField>

@@ -10,5 +10,10 @@
         <c-humanitix-setup-connection></c-humanitix-setup-connection>
       </template>
     </lightning-tab>
+    <lightning-tab label="Sync Settings" value="settings" onactive={handleTabActive}>
+      <template lwc:if={visited.settings}>
+        <c-humanitix-setup-sync-settings></c-humanitix-setup-sync-settings>
+      </template>
+    </lightning-tab>
   </lightning-tabset>
 </template>
