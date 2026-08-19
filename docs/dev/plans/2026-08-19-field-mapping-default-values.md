@@ -1685,3 +1685,20 @@ Expected within a few minutes: `Status__c = Success`, `Total_Records_Failed__c =
 - [ ] **Step 5: Update memory**
 
 Update `humanitix-package-status.md` (v1.2.0-1 id, promoted, released, installed in Kaipatiki), `kaipatiki-pilot-status.md` (upgraded, LastName default set, sync numbers), `connector-improvement-roadmap.md` (default values shipped; next is lean mode) and `humanitix-cto-relationship.md` (feature is live; tell the CTO), and the `MEMORY.md` index lines.
+
+---
+
+## Execution notes and review outcome (2026-08-19)
+
+Deviations from the plan as written, all applied on the branch before the package build:
+
+- Task 5: the test helper's `String json` parameter shadowed the `JSON` class (Apex is case-insensitive); renamed to `body`.
+- Task 8: the retired `StaticValue` row on `Lead.Company` is **kept as `Order_to_Lead_07` and shipped inactive** instead of deleted, so `Humanitix_Last_Order_Id__c` stays `Order_to_Lead_08` and no shipped DeveloperName changes meaning across upgrades. The resource therefore still holds 159 field mappings / 173 records. The generator docstring now states the rule (never remove or reorder a shipped `fm()` entry; deactivate it).
+- Review fixes (code review over the branch diff, 16 candidates verified, 11 kept):
+  - `HumanitixPersister.blanksOnlyUpdate` treats an existing value equal to the mapping's own Default Value as blank (a connector placeholder), so a later real value replaces it under `BlanksOnly`; curated values are still never overwritten. Covered by `HumanitixPersisterTest.blanksOnlyReplacesConnectorPlaceholdersButNotCuratedValues` and the second run in `HumanitixMappingEngineTest.contactLastNameDefaultsToUnknownWhenTheOrderHasNone`.
+  - `HumanitixMappingConfig.validate()` dry-runs the mapping's constant only (`validateConstantValue`): the `StaticValue` literal, or otherwise the Default Value, never the default path. Fixes a misattributed message for `StaticValue` mappings and a false failure for a `$root` default path; a bad `StaticValue` literal is now reported too.
+  - `HumanitixMappingConfig.fromRecords` trims Source Path, Default Source Path and Default Value (`trimToNull`), so records edited in Setup behave like ones saved from the form.
+  - `HumanitixMappingAdminController.structuralProblems` rejects a `StaticValue` mapping without a literal, or with defaults set (they would be ignored). The field form hides the default inputs for `StaticValue`, sends nulls for them, requires the literal, and caps the four text inputs at 255 characters.
+  - `HumanitixTypeCoercer.resolve` no longer maps `Reference` to `Text` (coerceType already does); it still withholds the Transform Arg for `Reference` mappings.
+  - Docs: the Defaults section names the Overwrite With Blank interplay (`= true` qualifier restored), the BlanksOnly placeholder rule, the retired inactive Lead row, and the upgrade steps for 1.1 orgs; the frequency claim in its first sentence was reworded as a mechanism.
+- Final counts before the build: 160 Apex tests, 86% org-wide coverage, 56 Jest tests.
