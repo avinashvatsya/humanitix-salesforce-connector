@@ -291,9 +291,29 @@ private class HumanitixMappingAdminControllerTest {
         System.assertNotEquals(null, lastName, 'Order_to_Contact maps LastName');
         System.assertEquals(null, lastName.defaultSourcePath, 'no shipped mapping uses a default path');
         if (!orgHasRecords()) {
-            // Task 8 ships LastName with Default Value "Unknown"; until then the
-            // defaults world reads null. Either value proves the property flows.
-            System.assert(lastName.defaultValue == null || lastName.defaultValue == 'Unknown', 'unexpected default: ' + lastName.defaultValue);
+            // The shipped resource carries Default Value "Unknown" on Order_to_Contact_03.
+            System.assertEquals('Unknown', lastName.defaultValue, 'the shipped default must read through fieldDtoFromDefault');
         }
+    }
+
+    @IsTest
+    static void structuralProblemsRejectStaticValueWithoutLiteralOrWithDefaults() {
+        HumanitixMappingAdminController.FieldMappingDto dto = newFieldDto('Event_to_Event', 'Description__c');
+        dto.sourcePath = null;
+        dto.transform = 'StaticValue';
+        dto.transformArg = null;
+        dto.defaultValue = 'Unknown';
+        HumanitixMappingAdminController.PendingChanges pending = new HumanitixMappingAdminController.PendingChanges();
+        pending.fieldMappings.add(dto);
+
+        List<String> problems = HumanitixMappingAdminController.structuralProblems(pending);
+
+        System.assertEquals(2, problems.size(), String.join(problems, ' | '));
+        System.assert(problems[0].contains('needs the literal in Transform Arg'), problems[0]);
+        System.assert(problems[1].contains('ignores Default Source Path and Default Value'), problems[1]);
+
+        dto.transformArg = 'In Progress';
+        dto.defaultValue = null;
+        System.assertEquals(0, HumanitixMappingAdminController.structuralProblems(pending).size(), 'a plain StaticValue mapping is fine');
     }
 }

@@ -30,6 +30,7 @@
           label="Source Path"
           field-level-help="JSON path in the Humanitix payload, for example eventName or tickets[0].price. $parent. and $root. prefixes reach enclosing records."
           value={sourcePath}
+          max-length="255"
           onchange={handleSourcePathChange}
           class="slds-m-bottom_small"
         ></lightning-input>
@@ -72,28 +73,33 @@
             label="Transform Arg"
             field-level-help="Required for Reference (Object.ExternalIdField), StaticValue, Concat, BoolMap, IsoToDateInTz."
             value={transformArg}
+            max-length="255"
             onchange={handleTransformArgChange}
             class="slds-m-bottom_small"
           ></lightning-input>
         </template>
 
-        <lightning-input
-          type="text"
-          label="Default Source Path"
-          field-level-help="Another Humanitix path to read when the mapped value is blank, for example _id or $parent.name. Tried before the fixed Default Value."
-          value={defaultSourcePath}
-          onchange={handleDefaultSourcePathChange}
-          class="slds-m-bottom_small"
-        ></lightning-input>
+        <template lwc:if={showDefaults}>
+          <lightning-input
+            type="text"
+            label="Default Source Path"
+            field-level-help="Another Humanitix path to read when the mapped value is blank, for example _id or $parent.name. Tried before the fixed Default Value."
+            value={defaultSourcePath}
+            max-length="255"
+            onchange={handleDefaultSourcePathChange}
+            class="slds-m-bottom_small"
+          ></lightning-input>
 
-        <lightning-input
-          type="text"
-          label="Default Value"
-          field-level-help="Fixed text written when both the mapped value and the Default Source Path are blank. It goes through the same Transform and Data Type as the mapped value."
-          value={defaultValue}
-          onchange={handleDefaultValueChange}
-          class="slds-m-bottom_small"
-        ></lightning-input>
+          <lightning-input
+            type="text"
+            label="Default Value"
+            field-level-help="Fixed text written when both the mapped value and the Default Source Path are blank. It goes through the same Transform and Data Type as the mapped value. Once a default is set the value is never blank, so Overwrite Blank no longer applies; use the BlanksOnly update mode to protect existing values."
+            value={defaultValue}
+            max-length="255"
+            onchange={handleDefaultValueChange}
+            class="slds-m-bottom_small"
+          ></lightning-input>
+        </template>
 
         <lightning-input
           type="checkbox"

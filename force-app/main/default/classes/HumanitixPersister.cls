@@ -10,6 +10,8 @@
  * Strategy × Update Mode matrix (Update_Mode__c applies to matched/existing rows):
  *   ExternalId    - Always: Database.upsert on the external id (skip blank keys).
  *                   BlanksOnly: pre-query existing; fill only blank fields; insert new.
+ *                   (A stored value equal to the field mapping's own Default Value is
+ *                   a placeholder the connector wrote, so it counts as blank.)
  *                   Never: insert only keys not already present.
  *   MatchByFields - match existing by a field set (e.g. CampaignId+ContactId);
  *                   Always: update matches / BlanksOnly: fill blanks / Never: skip
@@ -18,6 +20,7 @@
  */
 public with sharing class HumanitixPersister {
     private static final Integer MAX_ERRORS = 20;
+    private static final Map<String, Object> EMPTY_RECORD = new Map<String, Object>();
 
     public class PersistResult {
         public Integer processed = 0;
@@ -170,13 +173,14 @@ public with sharing class HumanitixPersister {
                 existingByKey.put(foldKey(k), e);
             }
         }
+        Map<String, Object> placeholders = placeholdersFor(om);
         List<SObject> toInsert = new List<SObject>();
         List<SObject> toUpdate = new List<SObject>();
         for (String k : byKey.keySet()) {
             SObject s = byKey.get(k);
             SObject existing = existingByKey.get(k);
             if (existing != null) {
-                SObject upd = blanksOnlyUpdate(s, existing);
+                SObject upd = blanksOnlyUpdate(s, existing, placeholders);
                 if (upd == null) {
                     r.processed++; // matched; nothing blank to fill — leave intact
                 } else {
@@ -255,6 +259,9 @@ public with sharing class HumanitixPersister {
         for (SObject e : Database.queryWithBinds(soql, binds, AccessLevel.SYSTEM_MODE)) {
             existingByKey.put(keyOf(e, om.matchFields), e);
         }
+        Map<String, Object> placeholders = om.updateMode == 'BlanksOnly'
+            ? placeholdersFor(om)
+            : new Map<String, Object>();
         List<SObject> toInsert = new List<SObject>();
         List<SObject> toUpdate = new List<SObject>();
         for (SObject s : byKey.values()) {
@@ -263,7 +270,7 @@ public with sharing class HumanitixPersister {
                 if (om.updateMode == 'Never') {
                     r.skipped++; // matched — existing record left untouched
                 } else if (om.updateMode == 'BlanksOnly') {
-                    SObject upd = blanksOnlyUpdate(s, existing);
+                    SObject upd = blanksOnlyUpdate(s, existing, placeholders);
                     if (upd == null) {
                         r.processed++; // matched; nothing blank to fill — leave intact
                     } else {
@@ -282,23 +289,59 @@ public with sharing class HumanitixPersister {
     }
 
     /**
-     * Update payload for Update Blanks Only: Id plus only the source-populated
-     * fields whose value on the existing record is blank. Returns null when the
-     * match needs no write at all (everything already filled).
+     * Update payload for BlanksOnly: Id plus only the source-populated fields
+     * whose value on the existing record is blank, or still holds this
+     * mapping's own Default Value (a placeholder the connector wrote earlier)
+     * while the built record now carries something else. Returns null when the
+     * match needs no write at all.
      */
-    private static SObject blanksOnlyUpdate(SObject built, SObject existing) {
+    private static SObject blanksOnlyUpdate(SObject built, SObject existing, Map<String, Object> placeholders) {
         SObject upd = built.getSObjectType().newSObject(existing.Id);
         Boolean hasWrites = false;
         for (String f : built.getPopulatedFieldsAsMap().keySet()) {
             if (f == 'Id') {
                 continue;
             }
-            if (existing.get(f) == null && built.get(f) != null) {
-                upd.put(f, built.get(f));
+            Object incoming = built.get(f);
+            if (incoming == null) {
+                continue;
+            }
+            Object current = existing.get(f);
+            Object placeholder = placeholders.get(f.toLowerCase());
+            Boolean isPlaceholder = placeholder != null && current == placeholder && incoming != placeholder;
+            if (current == null || isPlaceholder) {
+                upd.put(f, incoming);
                 hasWrites = true;
             }
         }
         return hasWrites ? upd : null;
+    }
+
+    /**
+     * The coerced Default Value of every active field mapping, by lower-cased
+     * target field. Under BlanksOnly an existing value equal to its mapping's
+     * default is a placeholder the connector wrote on an earlier run, not
+     * curated data, so a later real Humanitix value may replace it.
+     */
+    private static Map<String, Object> placeholdersFor(HumanitixMappingConfig.ObjectMapping om) {
+        Map<String, Object> out = new Map<String, Object>();
+        for (HumanitixMappingConfig.FieldMapping f : om.fields) {
+            if (f.active != true || String.isBlank(f.defaultValue) || f.dataType == 'Reference' ||
+                f.transform == 'StaticValue' || String.isBlank(f.targetField)) {
+                continue;
+            }
+            try {
+                Object v = HumanitixTypeCoercer.coerce(
+                    f.defaultValue, f.dataType, f.transform, f.transformArg, null, null, EMPTY_RECORD, null, EMPTY_RECORD
+                );
+                if (v != null) {
+                    out.put(f.targetField.toLowerCase(), v);
+                }
+            } catch (Exception e) {
+                continue; // validate() reports an uncoercible default before any DML runs
+            }
+        }
+        return out;
     }
 
     /** Widens a SELECT field list with every field the built records populate. */

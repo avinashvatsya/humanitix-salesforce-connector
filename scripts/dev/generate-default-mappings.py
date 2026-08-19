@@ -26,6 +26,10 @@ Contract encoded here (kept in sync with the mapping engine, Phase 2):
   - Default_Source_Path / Default_Value are fallbacks evaluated after the
     Transform when the mapped value is blank: the default path first, then the
     fixed value; the winner goes through the same Transform and Data Type.
+  - Field mapping DeveloperNames are positional (<Parent>_<NN>). Never remove or
+    reorder an entry in a shipped fields list once released: subscriber orgs keep
+    their records, so a reused name would change meaning across upgrades. Retire
+    an entry with active=False instead.
 """
 import os
 
@@ -313,6 +317,9 @@ MAPPINGS.append(om(
         fm("firstName", "FirstName"), fm("lastName", "LastName", default_value="Unknown"),
         fm("email", "Email", "Email", "Lower"), fm("mobile", "MobilePhone", "Phone"),
         fm("organisation", "Company", default_value="Unknown"),
+        # Retired in 1.2: Company now defaults through the mapping above. Kept
+        # inactive so Order_to_Lead_07/_08 keep their meaning in every org.
+        fm("", "Company", "Text", "StaticValue", arg="Unknown", overwrite=False, active=False),
         fm("_id", "Humanitix_Last_Order_Id__c"),
     ]))
 

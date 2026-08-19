@@ -96,7 +96,7 @@ resolution reads committed data, keep parents at a lower Load Order than childre
 
 ### Defaults
 
-Required Salesforce fields are the usual reason a record fails to insert:
+Some Salesforce fields are required, and an insert fails without them:
 `Lead.Company` and `Contact.LastName` are required, and Humanitix does not always
 have a value for them. A field mapping can carry two fallbacks so the connector
 still writes something sensible:
@@ -117,15 +117,29 @@ way to write a constant.
 
 Defaults follow the object mapping's Update Mode. Under `Always`, a default is
 written whenever Humanitix sends a blank, which can replace a value someone typed
-into Salesforce, exactly as `Overwrite With Blank` lets a blank clear a field.
-Use `BlanksOnly` on mappings that touch curated records (the shipped Order to
-Contact mapping already does).
+into Salesforce, exactly as `Overwrite With Blank = true` lets a blank clear a
+field. Note that `Overwrite With Blank = false` does not protect a field that has
+a default: once a default is set the mapping never produces a blank, so the field
+is always written. Use `BlanksOnly` on mappings that touch curated records (the
+shipped Order to Contact mapping already does).
+
+Under `BlanksOnly`, a stored value that equals the mapping's own Default Value is
+treated as blank. It is a placeholder the connector wrote on an earlier run, so a
+later order that carries the real value replaces it (a Contact created as
+`Unknown` becomes `Baggins` when the surname arrives), while any other existing
+value is left alone as usual.
 
 The shipped mappings use this for `Contact.LastName` (Source Path `lastName`,
 Default Value `Unknown`) and, on the optional Lead mapping, `Lead.Company`
-(Source Path `organisation`, Default Value `Unknown`) and `Lead.LastName`. Orgs
-that installed an earlier version keep their existing records; add a default to
-your own mapping records from the Mappings tab.
+(Source Path `organisation`, Default Value `Unknown`) and `Lead.LastName`. The
+older `StaticValue` row on `Lead.Company` (`Order_to_Lead_07`) now ships inactive.
+
+Orgs that installed an earlier version keep their existing records, so their
+mappings carry no defaults until you add them from the Mappings tab. If you
+upgraded from 1.1 and want the Lead behaviour above, set Default Value `Unknown`
+on the `organisation` to `Company` mapping and deactivate the `StaticValue` row
+`Order_to_Lead_07`; set Default Value `Unknown` on the Order to Contact
+`LastName` mapping for the Contact behaviour.
 
 ## Update modes
 
@@ -134,7 +148,7 @@ record that already exists in Salesforce:
 
 | Match Strategy | `Always` (default) | `BlanksOnly` | `Never` |
 | --- | --- | --- | --- |
-| `ExternalId` | Upsert: existing records are updated with the latest Humanitix values | Only fields that are currently blank are filled; existing values are never overwritten | Existing records are left untouched; only new keys are inserted |
+| `ExternalId` | Upsert: existing records are updated with the latest Humanitix values | Only fields that are currently blank are filled (a value equal to the field's Default Value counts as blank); other existing values are never overwritten | Existing records are left untouched; only new keys are inserted |
 | `MatchByFields` | Matched records are fully updated | Matched records get blank fields filled only | Matched records are left untouched |
 | `AlwaysCreate` | *(ignored — every row is inserted)* | *(ignored)* | *(ignored)* |
 

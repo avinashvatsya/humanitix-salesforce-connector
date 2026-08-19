@@ -1230,6 +1230,21 @@
   {
    "type": "Humanitix_Field_Mapping",
    "developerName": "Order_to_Lead_07",
+   "label": "Order_to_Lead :: Company",
+   "values": {
+    "Data_Type__c": "Text",
+    "Is_Active__c": false,
+    "Is_External_Id__c": false,
+    "Object_Mapping__c": "Order_to_Lead",
+    "Overwrite_Blank__c": false,
+    "Target_Field__c": "Company",
+    "Transform_Arg__c": "Unknown",
+    "Transform__c": "StaticValue"
+   }
+  },
+  {
+   "type": "Humanitix_Field_Mapping",
+   "developerName": "Order_to_Lead_08",
    "label": "Order_to_Lead :: Humanitix_Last_Order_Id",
    "values": {
     "Data_Type__c": "Text",

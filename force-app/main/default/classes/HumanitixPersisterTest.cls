@@ -311,4 +311,38 @@ private class HumanitixPersisterTest {
             System.assert(e.getMessage().contains('unknown Match Strategy "Bogus"'));
         }
     }
+
+    @IsTest
+    static void blanksOnlyReplacesConnectorPlaceholdersButNotCuratedValues() {
+        System.runAs(HumanitixTestDataFactory.marketingAdmin()) {
+            insert new List<Humanitix_Tag__c>{
+                new Humanitix_Tag__c(Name = 'Unknown', Humanitix_Id__c = 'p1'), // placeholder from an earlier sync
+                new Humanitix_Tag__c(Name = 'Curated', Humanitix_Id__c = 'p2')
+            };
+            HumanitixMappingConfig.ObjectMapping om = tagMapping('ExternalId');
+            om.updateMode = 'BlanksOnly';
+            HumanitixMappingConfig.FieldMapping name = new HumanitixMappingConfig.FieldMapping();
+            name.sourcePath = 'name';
+            name.targetField = 'Name';
+            name.dataType = 'Text';
+            name.transform = 'None';
+            name.defaultValue = 'Unknown';
+            name.active = true;
+            om.fields.add(name);
+            Test.startTest();
+            HumanitixPersister.PersistResult r = HumanitixPersister.persist(
+                om,
+                new List<SObject>{
+                    new Humanitix_Tag__c(Name = 'People', Humanitix_Id__c = 'p1'), // the real value arrives later
+                    new Humanitix_Tag__c(Name = 'Unknown', Humanitix_Id__c = 'p2'), // blank again: the default must not touch curated data
+                    new Humanitix_Tag__c(Name = 'Unknown', Humanitix_Id__c = 'p3') // a new record still gets the default
+                }
+            );
+            Test.stopTest();
+            System.assertEquals(3, r.processed);
+            System.assertEquals('People', [SELECT Name FROM Humanitix_Tag__c WHERE Humanitix_Id__c = 'p1'].Name, 'a placeholder yields to a later real value');
+            System.assertEquals('Curated', [SELECT Name FROM Humanitix_Tag__c WHERE Humanitix_Id__c = 'p2'].Name, 'a curated value is never overwritten, not even by the default');
+            System.assertEquals('Unknown', [SELECT Name FROM Humanitix_Tag__c WHERE Humanitix_Id__c = 'p3'].Name, 'a new record still gets the default');
+        }
+    }
 }

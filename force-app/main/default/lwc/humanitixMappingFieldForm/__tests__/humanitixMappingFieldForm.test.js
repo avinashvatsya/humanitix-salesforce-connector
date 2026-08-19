@@ -298,4 +298,33 @@ describe('c-humanitix-mapping-field-form', () => {
     expect(inputByLabel(element, 'Default Source Path').value).toBe('_id');
     expect(inputByLabel(element, 'Default Value').value).toBe('Unknown');
   });
+
+  it('hides the default inputs for StaticValue, drops them from the DTO, and requires the literal', async () => {
+    const element = await create({
+      mapping: { ...EXISTING, defaultSourcePath: '_id', defaultValue: 'Unknown' }
+    });
+    const queued = listenForQueue(element);
+
+    chooseCombobox(element, 'Transform', 'StaticValue');
+    await settle();
+    expect(inputByLabel(element, 'Default Source Path')).toBeNull();
+    expect(inputByLabel(element, 'Default Value')).toBeNull();
+
+    click(element, 'Queue change');
+    await settle();
+    expect(queued).not.toHaveBeenCalled();
+    expect(text(element)).toContain('StaticValue writes the literal in Transform Arg');
+
+    setInput(element, 'Transform Arg', 'In Progress');
+    await settle();
+    click(element, 'Queue change');
+    await settle();
+
+    expect(queued).toHaveBeenCalledTimes(1);
+    const dto = queued.mock.calls[0][0].detail;
+    expect(dto.transform).toBe('StaticValue');
+    expect(dto.transformArg).toBe('In Progress');
+    expect(dto.defaultSourcePath).toBeNull();
+    expect(dto.defaultValue).toBeNull();
+  });
 });

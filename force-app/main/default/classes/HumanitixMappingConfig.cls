@@ -152,13 +152,13 @@ public with sharing class HumanitixMappingConfig {
                 continue; // orphaned field mapping; ignore quietly
             }
             FieldMapping f = new FieldMapping();
-            f.sourcePath = fm.Source_Path__c;
+            f.sourcePath = trimToNull(fm.Source_Path__c);
             f.targetField = fm.Target_Field__c;
             f.dataType = String.isBlank(fm.Data_Type__c) ? 'Text' : fm.Data_Type__c;
             f.transform = String.isBlank(fm.Transform__c) ? 'None' : fm.Transform__c;
             f.transformArg = fm.Transform_Arg__c;
-            f.defaultSourcePath = fm.Default_Source_Path__c;
-            f.defaultValue = fm.Default_Value__c;
+            f.defaultSourcePath = trimToNull(fm.Default_Source_Path__c);
+            f.defaultValue = trimToNull(fm.Default_Value__c);
             f.isExternalId = fm.Is_External_Id__c == true;
             f.overwriteBlank = fm.Overwrite_Blank__c != false; // default true
             f.active = fm.Is_Active__c != false; // default true
@@ -258,9 +258,7 @@ public with sharing class HumanitixMappingConfig {
                 if (f.dataType == 'Reference' && String.isNotBlank(f.transformArg)) {
                     validateReference(gd, f.transformArg, m.devName, errors);
                 }
-                if (String.isNotBlank(f.defaultValue)) {
-                    validateDefaultValue(f, m.devName, errors);
-                }
+                validateConstantValue(f, m.devName, errors);
             }
             if (usesExtId && String.isNotBlank(m.externalIdField) && !populatesExtId) {
                 errors.add('Object Mapping "' + m.devName + '": no active field mapping populates external id field "' + m.externalIdField + '".');
@@ -291,21 +289,42 @@ public with sharing class HumanitixMappingConfig {
     }
 
     /**
-     * Dry-runs the fixed default through the mapping's Transform and Data Type
-     * against an empty record, so a default that cannot be coerced (say "abc"
-     * for a Decimal field) fails the run before any DML, like every other
-     * configuration mistake.
+     * Dry-runs the mapping's constant input through its Transform and Data
+     * Type: the StaticValue literal, or otherwise the fixed Default Value. A
+     * constant that cannot be coerced (say "abc" for a Decimal field) fails the
+     * run before any DML, like every other configuration mistake. Paths are
+     * left out on purpose: they can only be judged against a real payload.
      */
-    private void validateDefaultValue(FieldMapping f, String mappingName, List<String> errors) {
+    private void validateConstantValue(FieldMapping f, String mappingName, List<String> errors) {
+        Boolean isStatic = f.transform == 'StaticValue';
+        String constant = isStatic ? f.transformArg : f.defaultValue;
+        if (String.isBlank(constant)) {
+            return;
+        }
         try {
-            HumanitixTypeCoercer.resolve(f, EMPTY_RECORD, null, EMPTY_RECORD);
+            HumanitixTypeCoercer.coerce(
+                isStatic ? null : constant,
+                f.dataType,
+                f.transform,
+                f.dataType == 'Reference' ? null : f.transformArg,
+                null,
+                null,
+                EMPTY_RECORD,
+                null,
+                EMPTY_RECORD
+            );
         } catch (Exception e) {
-            String how = (String.isBlank(f.transform) || f.transform == 'None')
+            String setting = isStatic ? 'Transform Arg' : 'Default Value';
+            String how = (isStatic || String.isBlank(f.transform) || f.transform == 'None')
                 ? f.dataType
                 : f.dataType + ' with transform ' + f.transform;
-            errors.add('Field Mapping on "' + mappingName + '": Default Value "' + f.defaultValue + '" for ' +
+            errors.add('Field Mapping on "' + mappingName + '": ' + setting + ' "' + constant + '" for ' +
                 f.targetField + ' is not a valid ' + how + '.');
         }
+    }
+
+    private static String trimToNull(String s) {
+        return String.isBlank(s) ? null : s.trim();
     }
 
     private static List<String> splitCsv(String csv) {
