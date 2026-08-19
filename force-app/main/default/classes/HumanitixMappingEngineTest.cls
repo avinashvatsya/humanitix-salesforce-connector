@@ -241,4 +241,36 @@ private class HumanitixMappingEngineTest {
         }
         System.assert(found, 'validate() must flag an unknown Match Strategy; got: ' + errors);
     }
+
+    @IsTest
+    static void fromRecordsCarriesTheDefaultSettings() {
+        Humanitix_Object_Mapping__mdt om = new Humanitix_Object_Mapping__mdt(
+            DeveloperName = 'Tag_Test',
+            Source_Resource__c = 'Tag',
+            Target_SObject__c = 'Humanitix_Tag__c',
+            External_Id_Field__c = 'Humanitix_Id__c',
+            Match_Strategy__c = 'ExternalId',
+            Is_Active__c = true
+        );
+        Humanitix_Field_Mapping__mdt fm = new Humanitix_Field_Mapping__mdt(
+            DeveloperName = 'Tag_Test_01',
+            Object_Mapping__c = 'Tag_Test',
+            Source_Path__c = 'name',
+            Target_Field__c = 'Name',
+            Data_Type__c = 'Text',
+            Transform__c = 'Trim',
+            Default_Source_Path__c = '_id',
+            Default_Value__c = 'Unknown',
+            Is_Active__c = true
+        );
+
+        HumanitixMappingConfig cfg = HumanitixMappingConfig.fromRecords(
+            new List<Humanitix_Object_Mapping__mdt>{ om },
+            new List<Humanitix_Field_Mapping__mdt>{ fm }
+        );
+
+        HumanitixMappingConfig.FieldMapping f = cfg.objectMappings[0].fields[0];
+        System.assertEquals('_id', f.defaultSourcePath, 'Default_Source_Path__c must load into defaultSourcePath');
+        System.assertEquals('Unknown', f.defaultValue, 'Default_Value__c must load into defaultValue');
+    }
 }
