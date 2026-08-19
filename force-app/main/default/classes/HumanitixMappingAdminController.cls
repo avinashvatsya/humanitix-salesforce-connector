@@ -50,6 +50,8 @@ public with sharing class HumanitixMappingAdminController {
         @AuraEnabled public String dataType;
         @AuraEnabled public String transform;
         @AuraEnabled public String transformArg;
+        @AuraEnabled public String defaultSourcePath;
+        @AuraEnabled public String defaultValue;
         @AuraEnabled public Boolean isExternalId;
         @AuraEnabled public Boolean overwriteBlank;
         @AuraEnabled public Boolean active;
@@ -125,8 +127,8 @@ public with sharing class HumanitixMappingAdminController {
             } else {
                 for (Humanitix_Field_Mapping__mdt fm : [
                     SELECT DeveloperName, MasterLabel, Object_Mapping__c, Source_Path__c, Target_Field__c,
-                        Data_Type__c, Transform__c, Transform_Arg__c, Is_External_Id__c,
-                        Overwrite_Blank__c, Is_Active__c
+                        Data_Type__c, Transform__c, Transform_Arg__c, Default_Source_Path__c, Default_Value__c,
+                        Is_External_Id__c, Overwrite_Blank__c, Is_Active__c
                     FROM Humanitix_Field_Mapping__mdt
                     WHERE Object_Mapping__c = :objectMappingDevName
                     ORDER BY DeveloperName
@@ -375,7 +377,8 @@ public with sharing class HumanitixMappingAdminController {
         if (orgHasMappingRecords()) {
             for (Humanitix_Field_Mapping__mdt fm : [
                 SELECT DeveloperName, Object_Mapping__c, Source_Path__c, Target_Field__c, Data_Type__c,
-                    Transform__c, Transform_Arg__c, Is_External_Id__c, Overwrite_Blank__c, Is_Active__c
+                    Transform__c, Transform_Arg__c, Default_Source_Path__c, Default_Value__c,
+                    Is_External_Id__c, Overwrite_Blank__c, Is_Active__c
                 FROM Humanitix_Field_Mapping__mdt
             ]) {
                 out.put(fm.DeveloperName, fm);
@@ -458,6 +461,8 @@ public with sharing class HumanitixMappingAdminController {
         dto.dataType = String.isBlank(fm.Data_Type__c) ? 'Text' : fm.Data_Type__c;
         dto.transform = String.isBlank(fm.Transform__c) ? 'None' : fm.Transform__c;
         dto.transformArg = fm.Transform_Arg__c;
+        dto.defaultSourcePath = fm.Default_Source_Path__c;
+        dto.defaultValue = fm.Default_Value__c;
         dto.isExternalId = fm.Is_External_Id__c == true;
         dto.overwriteBlank = fm.Overwrite_Blank__c != false;
         dto.active = fm.Is_Active__c != false;
@@ -475,6 +480,8 @@ public with sharing class HumanitixMappingAdminController {
         dto.dataType = defaultString(r.values.get('Data_Type__c'), 'Text');
         dto.transform = defaultString(r.values.get('Transform__c'), 'None');
         dto.transformArg = (String) r.values.get('Transform_Arg__c');
+        dto.defaultSourcePath = (String) r.values.get('Default_Source_Path__c');
+        dto.defaultValue = (String) r.values.get('Default_Value__c');
         dto.isExternalId = r.values.get('Is_External_Id__c') == true;
         dto.overwriteBlank = r.values.get('Overwrite_Blank__c') != false;
         dto.active = r.values.get('Is_Active__c') != false;
@@ -506,6 +513,8 @@ public with sharing class HumanitixMappingAdminController {
             Data_Type__c = dto.dataType,
             Transform__c = dto.transform,
             Transform_Arg__c = dto.transformArg,
+            Default_Source_Path__c = dto.defaultSourcePath,
+            Default_Value__c = dto.defaultValue,
             Is_External_Id__c = dto.isExternalId == true,
             Overwrite_Blank__c = dto.overwriteBlank != false,
             Is_Active__c = dto.active != false
@@ -534,6 +543,8 @@ public with sharing class HumanitixMappingAdminController {
             'Data_Type__c' => dto.dataType,
             'Transform__c' => dto.transform,
             'Transform_Arg__c' => dto.transformArg,
+            'Default_Source_Path__c' => dto.defaultSourcePath,
+            'Default_Value__c' => dto.defaultValue,
             'Is_External_Id__c' => dto.isExternalId == true,
             'Overwrite_Blank__c' => dto.overwriteBlank != false,
             'Is_Active__c' => dto.active != false
