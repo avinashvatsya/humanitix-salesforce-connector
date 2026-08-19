@@ -11,10 +11,10 @@
 
 ## Option A — Install the unlocked package (recommended for most orgs)
 
-Version 1.1.0 (`04tOb000002IV2bIAG`):
+Version 1.2.0 (`04tOb000002JelNIAS`):
 
-[![Install in Sandbox](https://img.shields.io/badge/Install%20in%20Sandbox-5A6E7F?style=for-the-badge&logo=salesforce&logoColor=white)](https://test.salesforce.com/packaging/installPackage.apexp?p0=04tOb000002IV2bIAG)
-[![Install in Production](https://img.shields.io/badge/Install%20in%20Production-00A1E0?style=for-the-badge&logo=salesforce&logoColor=white)](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tOb000002IV2bIAG)
+[![Install in Sandbox](https://img.shields.io/badge/Install%20in%20Sandbox-5A6E7F?style=for-the-badge&logo=salesforce&logoColor=white)](https://test.salesforce.com/packaging/installPackage.apexp?p0=04tOb000002JelNIAS)
+[![Install in Production](https://img.shields.io/badge/Install%20in%20Production-00A1E0?style=for-the-badge&logo=salesforce&logoColor=white)](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tOb000002JelNIAS)
 
 1. Click **Install in Production** (production, Developer Edition or Trailhead
    Playground) or **Install in Sandbox**. The buttons above always point at the
@@ -26,7 +26,7 @@ Version 1.1.0 (`04tOb000002IV2bIAG`):
 Or from the Salesforce CLI:
 
 ```bash
-sf package install --package 04tOb000002IV2bIAG --wait 20 --security-type AdminsOnly --target-org <alias>
+sf package install --package 04tOb000002JelNIAS --wait 20 --security-type AdminsOnly --target-org <alias>
 ```
 
 > **No-namespace note:** this package has no namespace, so its components install

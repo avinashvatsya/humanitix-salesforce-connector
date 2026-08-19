@@ -51,17 +51,17 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full design.
 
 ## <a name="install"></a>Install
 
-Install the **unlocked package** directly — no cloning or building required. Current version: **1.1.0** (`04tOb000002IV2bIAG`; maintainers: see [docs/PUBLISHING.md](docs/PUBLISHING.md) to release a new one).
+Install the **unlocked package** directly — no cloning or building required. Current version: **1.2.0** (`04tOb000002JelNIAS`; maintainers: see [docs/PUBLISHING.md](docs/PUBLISHING.md) to release a new one).
 
-[![Install in Sandbox](https://img.shields.io/badge/Install%20in%20Sandbox-5A6E7F?style=for-the-badge&logo=salesforce&logoColor=white)](https://test.salesforce.com/packaging/installPackage.apexp?p0=04tOb000002IV2bIAG)
-[![Install in Production](https://img.shields.io/badge/Install%20in%20Production-00A1E0?style=for-the-badge&logo=salesforce&logoColor=white)](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tOb000002IV2bIAG)
+[![Install in Sandbox](https://img.shields.io/badge/Install%20in%20Sandbox-5A6E7F?style=for-the-badge&logo=salesforce&logoColor=white)](https://test.salesforce.com/packaging/installPackage.apexp?p0=04tOb000002JelNIAS)
+[![Install in Production](https://img.shields.io/badge/Install%20in%20Production-00A1E0?style=for-the-badge&logo=salesforce&logoColor=white)](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tOb000002JelNIAS)
 
 Use **Install in Production** for production, Developer Edition and Trailhead Playground orgs; **Install in Sandbox** for sandboxes. Choose *Install for Admins Only*; access is granted through the permission set.
 
 Or from the Salesforce CLI:
 
 ```bash
-sf package install --package 04tOb000002IV2bIAG --wait 20 --security-type AdminsOnly --target-org <alias>
+sf package install --package 04tOb000002JelNIAS --wait 20 --security-type AdminsOnly --target-org <alias>
 ```
 
 After installing: assign the **Humanitix Integration Admin** permission set, enter your API key, and make the running user a Marketing User — full steps in **[docs/INSTALL.md](docs/INSTALL.md)** and **[docs/CONFIGURATION.md](docs/CONFIGURATION.md)**. Prefer to build from source? See [Develop / contribute](#develop--contribute).
