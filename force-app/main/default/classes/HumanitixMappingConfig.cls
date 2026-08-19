@@ -39,6 +39,8 @@ public with sharing class HumanitixMappingConfig {
         public String dataType;
         public String transform;
         public String transformArg;
+        public String defaultSourcePath;
+        public String defaultValue;
         public Boolean isExternalId;
         public Boolean overwriteBlank;
         public Boolean active;
@@ -110,7 +112,8 @@ public with sharing class HumanitixMappingConfig {
         }
         return fromRecords(objectRecords, [
             SELECT Object_Mapping__c, Source_Path__c, Target_Field__c, Data_Type__c, Transform__c,
-                Transform_Arg__c, Is_External_Id__c, Overwrite_Blank__c, Is_Active__c
+                Transform_Arg__c, Default_Source_Path__c, Default_Value__c, Is_External_Id__c,
+                Overwrite_Blank__c, Is_Active__c
             FROM Humanitix_Field_Mapping__mdt
         ]);
     }
@@ -153,6 +156,8 @@ public with sharing class HumanitixMappingConfig {
             f.dataType = String.isBlank(fm.Data_Type__c) ? 'Text' : fm.Data_Type__c;
             f.transform = String.isBlank(fm.Transform__c) ? 'None' : fm.Transform__c;
             f.transformArg = fm.Transform_Arg__c;
+            f.defaultSourcePath = fm.Default_Source_Path__c;
+            f.defaultValue = fm.Default_Value__c;
             f.isExternalId = fm.Is_External_Id__c == true;
             f.overwriteBlank = fm.Overwrite_Blank__c != false; // default true
             f.active = fm.Is_Active__c != false; // default true
