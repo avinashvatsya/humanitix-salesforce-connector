@@ -28,6 +28,6 @@
     </values>
     <values>
         <field>Description__c</field>
-        <value xsi:type="xsd:string">OPTIONAL: activate to route buyers to Leads instead of / as well as Contacts. Lead.Company is required, so a fallback static value is applied when blank.</value>
+        <value xsi:type="xsd:string">OPTIONAL: activate to route buyers to Leads instead of / as well as Contacts. Lead.Company and Lead.LastName are required, so they default to Unknown when the order has no value.</value>
     </values>
 </CustomMetadata>

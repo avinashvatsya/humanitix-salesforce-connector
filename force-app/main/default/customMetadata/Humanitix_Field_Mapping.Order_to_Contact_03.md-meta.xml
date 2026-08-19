@@ -34,4 +34,8 @@
         <field>Is_Active__c</field>
         <value xsi:type="xsd:boolean">true</value>
     </values>
+    <values>
+        <field>Default_Value__c</field>
+        <value xsi:type="xsd:string">Unknown</value>
+    </values>
 </CustomMetadata>

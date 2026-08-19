@@ -15,14 +15,6 @@
         <value xsi:type="xsd:string">MatchByFields</value>
     </values>
     <values>
-        <field>Match_Field_Set__c</field>
-        <value xsi:type="xsd:string">Email</value>
-    </values>
-    <values>
-        <field>Update_Mode__c</field>
-        <value xsi:type="xsd:string">BlanksOnly</value>
-    </values>
-    <values>
         <field>Load_Order__c</field>
         <value xsi:type="xsd:double">18.0</value>
     </values>
@@ -33,6 +25,14 @@
     <values>
         <field>External_Id_Field__c</field>
         <value xsi:type="xsd:string">Humanitix_Contact_Key__c</value>
+    </values>
+    <values>
+        <field>Match_Field_Set__c</field>
+        <value xsi:type="xsd:string">Email</value>
+    </values>
+    <values>
+        <field>Update_Mode__c</field>
+        <value xsi:type="xsd:string">BlanksOnly</value>
     </values>
     <values>
         <field>Description__c</field>
