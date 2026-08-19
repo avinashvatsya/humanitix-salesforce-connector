@@ -316,4 +316,55 @@ private class HumanitixMappingEngineTest {
         List<String> clean = cfg.validate();
         System.assertEquals(0, clean.size(), 'a coercible default must validate cleanly; got: ' + clean);
     }
+
+    @IsTest
+    static void contactLastNameDefaultsToUnknownWhenTheOrderHasNone() {
+        HumanitixTestDataFactory.useShippedMappings();
+        List<Object> orders = (List<Object>) JSON.deserializeUntyped(
+            '[' + HumanitixTestDataFactory.orderJson().replace('"lastName":"Baggins",', '') + ']'
+        );
+        System.runAs(HumanitixTestDataFactory.marketingAdmin()) {
+            Test.startTest();
+            HumanitixMappingEngine.run('Event', HumanitixTestDataFactory.events());
+            HumanitixMappingEngine.run('Order', orders);
+            Test.stopTest();
+        }
+        Contact c = [SELECT LastName FROM Contact WHERE Humanitix_Contact_Key__c = 'frodo@shire.com'];
+        System.assertEquals('Unknown', c.LastName, 'the shipped Contact.LastName default must fill a missing last name');
+    }
+
+    @IsTest
+    static void leadCompanyUsesOrganisationOrDefaultsToUnknown() {
+        HumanitixTestDataFactory.useShippedMappings();
+        for (HumanitixMappingConfig.ObjectMapping om : HumanitixMappingConfig.getInstance().objectMappings) {
+            if (om.devName == 'Order_to_Lead') {
+                om.active = true; // ships inactive; the fixture flips it on in memory only
+            }
+        }
+        String withOrg = HumanitixTestDataFactory.orderJson();
+        String withoutOrg = withOrg
+            .replace('"organisation":"Fellowship",', '')
+            .replace('"email":"Frodo@Shire.com"', '"email":"Sam@Shire.com"')
+            .replace('"_id":"' + HumanitixTestDataFactory.ORDER_ID + '"', '"_id":"ord_sam_1"');
+        List<Object> orders = (List<Object>) JSON.deserializeUntyped('[' + withOrg + ',' + withoutOrg + ']');
+
+        System.runAs(HumanitixTestDataFactory.marketingAdmin()) {
+            Test.startTest();
+            HumanitixMappingEngine.run('Event', HumanitixTestDataFactory.events());
+            HumanitixMappingEngine.run('Order', orders);
+            Test.stopTest();
+        }
+
+        Map<String, Lead> byKey = new Map<String, Lead>();
+        for (Lead l : [
+            SELECT Company, Humanitix_Contact_Key__c
+            FROM Lead
+            WHERE Humanitix_Contact_Key__c IN ('frodo@shire.com', 'sam@shire.com')
+        ]) {
+            byKey.put(l.Humanitix_Contact_Key__c, l);
+        }
+        System.assertEquals(2, byKey.size(), 'both orders must produce a Lead');
+        System.assertEquals('Fellowship', byKey.get('frodo@shire.com').Company, 'a present organisation wins');
+        System.assertEquals('Unknown', byKey.get('sam@shire.com').Company, 'a missing organisation falls back to the shipped default');
+    }
 }

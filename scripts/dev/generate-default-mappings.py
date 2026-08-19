@@ -23,6 +23,9 @@ Contract encoded here (kept in sync with the mapping engine, Phase 2):
     null (never orphaned).
   - Money values from Humanitix are decimal major units => DecimalMoney is a
     pass-through Decimal (NO division).
+  - Default_Source_Path / Default_Value are fallbacks evaluated after the
+    Transform when the mapped value is blank: the default path first, then the
+    fixed value; the winner goes through the same Transform and Data Type.
 """
 import os
 
@@ -63,9 +66,10 @@ def write(dev_name, content):
 # ---- field-mapping spec ---------------------------------------------------
 
 def fm(source, target, dtype="Text", transform="None", arg=None,
-       extid=False, overwrite=True, active=True):
+       extid=False, overwrite=True, active=True, default_path=None, default_value=None):
     return dict(source=source, target=target, dtype=dtype, transform=transform,
-                arg=arg, extid=extid, overwrite=overwrite, active=active)
+                arg=arg, extid=extid, overwrite=overwrite, active=active,
+                default_path=default_path, default_value=default_value)
 
 
 def om(dev, label, resource, target, ext_id_field=None, load=10,
@@ -170,7 +174,7 @@ MAPPINGS.append(om(
                 "updates: existing values are never overwritten). Orders without an email are skipped.",
     fields=[
         fm("email", "Humanitix_Contact_Key__c", "Text", "Lower", extid=True),
-        fm("firstName", "FirstName"), fm("lastName", "LastName"),
+        fm("firstName", "FirstName"), fm("lastName", "LastName", default_value="Unknown"),
         fm("email", "Email", "Email", "Lower"), fm("mobile", "MobilePhone", "Phone"),
         fm("organisation", "Humanitix_Organisation__c"),
         fm("_id", "Humanitix_Last_Order_Id__c"),
@@ -303,13 +307,12 @@ MAPPINGS.append(om(
     "Order_to_Lead", "Order to Lead (optional)", "Order", "Lead",
     ext_id_field="Humanitix_Contact_Key__c", load=30, active=False,
     description="OPTIONAL: activate to route buyers to Leads instead of / as well as Contacts. "
-                "Lead.Company is required, so a fallback static value is applied when blank.",
+                "Lead.Company and Lead.LastName are required, so they default to Unknown when the order has no value.",
     fields=[
         fm("email", "Humanitix_Contact_Key__c", "Text", "Lower", extid=True),
-        fm("firstName", "FirstName"), fm("lastName", "LastName"),
+        fm("firstName", "FirstName"), fm("lastName", "LastName", default_value="Unknown"),
         fm("email", "Email", "Email", "Lower"), fm("mobile", "MobilePhone", "Phone"),
-        fm("organisation", "Company"),
-        fm("", "Company", "Text", "StaticValue", arg="Unknown", overwrite=False),
+        fm("organisation", "Company", default_value="Unknown"),
         fm("_id", "Humanitix_Last_Order_Id__c"),
     ]))
 
@@ -363,6 +366,10 @@ def emit_field_mapping(parent_dev, idx, f):
         rows.insert(1, val("Source_Path__c", f["source"], "string"))
     if f["arg"] is not None:
         rows.append(val("Transform_Arg__c", f["arg"], "string"))
+    if f.get("default_path"):
+        rows.append(val("Default_Source_Path__c", f["default_path"], "string"))
+    if f.get("default_value") is not None:
+        rows.append(val("Default_Value__c", f["default_value"], "string"))
     dev_name = f"{parent_dev}_{idx:02d}"
     dev = f"{FIELD_TYPE}.{dev_name}"
     label = f"{parent_dev} :: {f['target']}"

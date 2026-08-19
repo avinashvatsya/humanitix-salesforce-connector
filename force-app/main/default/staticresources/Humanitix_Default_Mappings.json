@@ -1065,6 +1065,7 @@
    "label": "Order_to_Contact :: LastName",
    "values": {
     "Data_Type__c": "Text",
+    "Default_Value__c": "Unknown",
     "Is_Active__c": true,
     "Is_External_Id__c": false,
     "Object_Mapping__c": "Order_to_Contact",
@@ -1170,6 +1171,7 @@
    "label": "Order_to_Lead :: LastName",
    "values": {
     "Data_Type__c": "Text",
+    "Default_Value__c": "Unknown",
     "Is_Active__c": true,
     "Is_External_Id__c": false,
     "Object_Mapping__c": "Order_to_Lead",
@@ -1215,6 +1217,7 @@
    "label": "Order_to_Lead :: Company",
    "values": {
     "Data_Type__c": "Text",
+    "Default_Value__c": "Unknown",
     "Is_Active__c": true,
     "Is_External_Id__c": false,
     "Object_Mapping__c": "Order_to_Lead",
@@ -1227,21 +1230,6 @@
   {
    "type": "Humanitix_Field_Mapping",
    "developerName": "Order_to_Lead_07",
-   "label": "Order_to_Lead :: Company",
-   "values": {
-    "Data_Type__c": "Text",
-    "Is_Active__c": true,
-    "Is_External_Id__c": false,
-    "Object_Mapping__c": "Order_to_Lead",
-    "Overwrite_Blank__c": false,
-    "Target_Field__c": "Company",
-    "Transform_Arg__c": "Unknown",
-    "Transform__c": "StaticValue"
-   }
-  },
-  {
-   "type": "Humanitix_Field_Mapping",
-   "developerName": "Order_to_Lead_08",
    "label": "Order_to_Lead :: Humanitix_Last_Order_Id",
    "values": {
     "Data_Type__c": "Text",
@@ -2522,7 +2510,7 @@
    "developerName": "Order_to_Lead",
    "label": "Order to Lead (optional)",
    "values": {
-    "Description__c": "OPTIONAL: activate to route buyers to Leads instead of / as well as Contacts. Lead.Company is required, so a fallback static value is applied when blank.",
+    "Description__c": "OPTIONAL: activate to route buyers to Leads instead of / as well as Contacts. Lead.Company and Lead.LastName are required, so they default to Unknown when the order has no value.",
     "External_Id_Field__c": "Humanitix_Contact_Key__c",
     "Is_Active__c": false,
     "Load_Order__c": 30.0,
