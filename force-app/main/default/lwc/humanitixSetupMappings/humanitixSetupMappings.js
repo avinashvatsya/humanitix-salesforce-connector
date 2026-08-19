@@ -110,6 +110,8 @@ function fieldDto(row, overrides) {
     dataType: row.dataType,
     transform: row.transform,
     transformArg: row.transformArg,
+    defaultSourcePath: row.defaultSourcePath,
+    defaultValue: row.defaultValue,
     isExternalId: row.isExternalId === true,
     overwriteBlank: row.overwriteBlank === true,
     active: row.active === true,

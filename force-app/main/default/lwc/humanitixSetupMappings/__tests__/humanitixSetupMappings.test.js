@@ -439,4 +439,27 @@ describe('c-humanitix-setup-mappings', () => {
     expect(getObjectMappings).toHaveBeenCalledTimes(1);
     expect(text(element)).toContain('1 change pending');
   });
+
+  it('keeps the default settings when toggling a field mapping', async () => {
+    const element = await createAndLoad();
+
+    rowAction(element, 'view', { ...OBJECT_MAPPINGS[0] });
+    await settle();
+    rowAction(element, 'toggle', {
+      ...FIELD_MAPPINGS[1],
+      defaultSourcePath: '_id',
+      defaultValue: 'Unknown'
+    });
+    await settle();
+
+    click(element, 'Save All');
+    await settle();
+
+    const payload = JSON.parse(savePending.mock.calls[0][0].pendingJson);
+    expect(payload.fieldMappings).toHaveLength(1);
+    expect(payload.fieldMappings[0].devName).toBe('Event_to_Event_02');
+    expect(payload.fieldMappings[0].active).toBe(false);
+    expect(payload.fieldMappings[0].defaultSourcePath).toBe('_id');
+    expect(payload.fieldMappings[0].defaultValue).toBe('Unknown');
+  });
 });

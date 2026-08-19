@@ -35,7 +35,8 @@ const TRANSFORM_OPTIONS = [
 const NOTIFICATION_BASE = 'slds-scoped-notification slds-media slds-media_center';
 
 const NO_TARGET_FIELD = 'Choose a target field.';
-const NO_SOURCE_PATH = 'Enter a source path, or choose the StaticValue transform.';
+const NO_SOURCE_PATH =
+  'Enter a source path, set a Default Source Path or Default Value, or choose the StaticValue transform.';
 const BAD_REFERENCE =
   'A Reference field needs a transform arg in the form Object.ExternalIdField, for example Humanitix_Event__c.Humanitix_Id__c.';
 
@@ -70,6 +71,8 @@ export default class HumanitixMappingFieldForm extends LightningElement {
   dataType = 'Text';
   transform = 'None';
   transformArg = '';
+  defaultSourcePath = '';
+  defaultValue = '';
   isExternalId = false;
   overwriteBlank = true;
   active = true;
@@ -119,6 +122,8 @@ export default class HumanitixMappingFieldForm extends LightningElement {
     this.dataType = dto.dataType || 'Text';
     this.transform = dto.transform || 'None';
     this.transformArg = dto.transformArg || '';
+    this.defaultSourcePath = dto.defaultSourcePath || '';
+    this.defaultValue = dto.defaultValue || '';
     this.isExternalId = dto.isExternalId === true;
     // Both flags default on for a new mapping, which is what Apex assumes for a
     // blank record too.
@@ -159,6 +164,14 @@ export default class HumanitixMappingFieldForm extends LightningElement {
     this.transformArg = event.target.value;
   }
 
+  handleDefaultSourcePathChange(event) {
+    this.defaultSourcePath = event.target.value;
+  }
+
+  handleDefaultValueChange(event) {
+    this.defaultValue = event.target.value;
+  }
+
   handleExternalIdChange(event) {
     this.isExternalId = event.target.checked === true;
   }
@@ -177,7 +190,9 @@ export default class HumanitixMappingFieldForm extends LightningElement {
     if (!hasText(this.targetField)) {
       problems.push(NO_TARGET_FIELD);
     }
-    if (this.transform !== 'StaticValue' && !hasText(this.sourcePath)) {
+    const hasSource =
+      hasText(this.sourcePath) || hasText(this.defaultSourcePath) || hasText(this.defaultValue);
+    if (this.transform !== 'StaticValue' && !hasSource) {
       problems.push(NO_SOURCE_PATH);
     }
     if (this.dataType === 'Reference' && this.transformArg.indexOf('.') < 1) {
@@ -196,6 +211,8 @@ export default class HumanitixMappingFieldForm extends LightningElement {
       dataType: this.dataType,
       transform: this.transform,
       transformArg: trimmedOrNull(this.transformArg),
+      defaultSourcePath: trimmedOrNull(this.defaultSourcePath),
+      defaultValue: trimmedOrNull(this.defaultValue),
       isExternalId: this.isExternalId === true,
       overwriteBlank: this.overwriteBlank === true,
       active: this.active === true

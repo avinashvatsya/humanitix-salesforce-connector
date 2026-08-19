@@ -78,6 +78,24 @@
         </template>
 
         <lightning-input
+          type="text"
+          label="Default Source Path"
+          field-level-help="Another Humanitix path to read when the mapped value is blank, for example _id or $parent.name. Tried before the fixed Default Value."
+          value={defaultSourcePath}
+          onchange={handleDefaultSourcePathChange}
+          class="slds-m-bottom_small"
+        ></lightning-input>
+
+        <lightning-input
+          type="text"
+          label="Default Value"
+          field-level-help="Fixed text written when both the mapped value and the Default Source Path are blank. It goes through the same Transform and Data Type as the mapped value."
+          value={defaultValue}
+          onchange={handleDefaultValueChange}
+          class="slds-m-bottom_small"
+        ></lightning-input>
+
+        <lightning-input
           type="checkbox"
           label="External Id"
           field-level-help="This field carries the external id used to match existing records."
