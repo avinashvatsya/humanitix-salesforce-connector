@@ -31,6 +31,7 @@ Humanitix already offers an official managed connector. This project is a free, 
 - Pulls **Events, Orders, Tickets, Tags** (plus nested Ticket Types, Event Dates, and checkout question responses).
 - Writes a **faithful custom-object layer** (system of record) *and* maps into **standard objects** (Campaign / Contact / Campaign Member) by default.
 - **Repoint any field** to your own object/field from the in-app mapping editor, or by editing Custom Metadata directly. No Apex changes.
+- **Default values** for any target field: fall back to another Humanitix field or a fixed value when the source is blank, so required fields such as `Contact.LastName` and `Lead.Company` still get a value.
 - Runs on a **schedule**, **on demand**, or from a **Flow / Agentforce** action, with full **sync logs**.
 - **Configured in the app:** the *Humanitix Setup* tab is a five-tab console (Dashboard, Connection, Sync Settings, Schedule, Mappings) covering the API key, sync settings, scheduling and mappings. The equivalent Salesforce Setup screens still work.
 

@@ -14,7 +14,8 @@ underneath it. From there you can:
   Order and Is Active.
 - **Edit or create a field mapping.** The target field comes from a picker of the
   writable fields on that mapping's target object, so an API name can't be
-  mistyped.
+  mistyped. Each field mapping can also carry a Default Source Path and a Default
+  Value (see [Defaults](#defaults) below).
 - **Validate before saving.** Your pending changes are checked the same way the
   sync engine checks the configuration at the start of a run, and the save is
   blocked while anything is wrong.
@@ -72,6 +73,8 @@ One record per *(source path → target field)*, linked to its Object Mapping by
 | Data Type | `Text`, `LongText`, `DateTime`, `Date`, `Decimal`, `Currency`, `Integer`, `Boolean`, `Email`, `Phone`, `Url`, `Reference` |
 | Transform | see below |
 | Transform Arg | Argument for the transform (or, for `Reference`, the target `Object.ExternalIdField`) |
+| Default Source Path | Another Humanitix path to read when the mapped value is blank, e.g. `_id` or `$parent.name`. Tried before Default Value. |
+| Default Value | Fixed text used when the mapped value and the Default Source Path are both blank, e.g. `Unknown` for a required field. |
 | Is External Id | Marks the field mapping that populates the external id |
 | Overwrite With Blank | If false, a null source value won't overwrite an existing value |
 
@@ -90,6 +93,39 @@ the source value (after its Transform, e.g. `Lower` to normalise an email) is
 matched against **Transform Arg = `<Object>.<ExternalIdField>`**. If no parent is
 found the lookup is left null — children are never orphaned or mislinked. Because
 resolution reads committed data, keep parents at a lower Load Order than children.
+
+### Defaults
+
+Required Salesforce fields are the usual reason a record fails to insert:
+`Lead.Company` and `Contact.LastName` are required, and Humanitix does not always
+have a value for them. A field mapping can carry two fallbacks so the connector
+still writes something sensible:
+
+1. The Humanitix value at **Source Path** is used when it is present.
+2. Otherwise the value at **Default Source Path** is used, if that is present.
+3. Otherwise the fixed **Default Value** is used, if one is set.
+
+"Present" is judged after the Transform runs and before the value is coerced to
+the Data Type, so a `Trim` or `JoinArray` result of an empty string also falls
+through to the defaults. Whichever value wins then goes through the mapping's
+Transform and Data Type like any other value: a Default Value of `true` on a
+`Boolean` field ticks the box, and a Default Value of `abc` on a `Decimal` field
+is reported by validation before the run starts. A `Reference` mapping applies
+the same fallbacks to the external id it resolves. `StaticValue` ignores both
+defaults; a mapping with no Source Path and only a Default Value is the simpler
+way to write a constant.
+
+Defaults follow the object mapping's Update Mode. Under `Always`, a default is
+written whenever Humanitix sends a blank, which can replace a value someone typed
+into Salesforce, exactly as `Overwrite With Blank` lets a blank clear a field.
+Use `BlanksOnly` on mappings that touch curated records (the shipped Order to
+Contact mapping already does).
+
+The shipped mappings use this for `Contact.LastName` (Source Path `lastName`,
+Default Value `Unknown`) and, on the optional Lead mapping, `Lead.Company`
+(Source Path `organisation`, Default Value `Unknown`) and `Lead.LastName`. Orgs
+that installed an earlier version keep their existing records; add a default to
+your own mapping records from the Mappings tab.
 
 ## Update modes
 
@@ -139,6 +175,11 @@ standard-object mappings are the CRM-facing layer you can retarget.
 **Repoint a field.** To store the event's `slug` on a Campaign field of yours,
 edit the `Event_to_Campaign` mapping's field records (or add one): Source Path
 `slug`, Target Field `My_Slug__c`, Data Type `Text`.
+
+**Default an external id to the Humanitix record id.** On the field mapping that
+populates your external id, set Source Path to the field you prefer and Default
+Source Path to `_id`, so the Humanitix id fills in whenever the preferred field is
+blank.
 
 **Send attendees to Leads instead of Contacts.** Activate the `Order_to_Lead`
 mapping and deactivate `Order_to_Contact` (and, if you use it,
