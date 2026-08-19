@@ -1,7 +1,10 @@
 /**
  * Turns deserialized Humanitix JSON records into target SObjects for one Object
- * Mapping, using its Field Mappings. Non-reference fields are coerced and set
- * inline; reference fields become RefRequests for the RelationshipResolver.
+ * Mapping, using its Field Mappings. Every field value comes from
+ * HumanitixTypeCoercer.resolve, which applies the mapping's Default Source Path
+ * and Default Value when the Humanitix value is blank. Non-reference fields are
+ * coerced and set inline; reference fields become RefRequests for the
+ * RelationshipResolver.
  *
  * Handles nested-collection mappings (e.g. an event's ticketTypes[]) by expanding
  * each array element into its own context, with `$parent`/`$root` pointing at the
@@ -71,12 +74,11 @@ public with sharing class HumanitixRecordBuilder {
                 // Isolate a single malformed value so it can't abort the whole page;
                 // the record keeps the fields that mapped cleanly.
                 try {
+                    Object value = HumanitixTypeCoercer.resolve(f, c.record, c.parent, c.root);
                     if (f.dataType == 'Reference') {
-                        Object rawKey = HumanitixJsonNavigator.valueAt(f.sourcePath, c.record, c.parent, c.root);
-                        Object normalized = HumanitixTypeCoercer.coerce(
-                            rawKey, 'Text', f.transform, null, c.record, c.parent, c.root
-                        );
-                        String key = normalized == null ? null : String.valueOf(normalized);
+                        // The (possibly defaulted) value is the external-id key the
+                        // resolver matches against Transform Arg's Object.Field.
+                        String key = value == null ? null : String.valueOf(value);
                         if (String.isNotBlank(key) && String.isNotBlank(f.transformArg) && f.transformArg.contains('.')) {
                             List<String> parts = f.transformArg.split('\\.');
                             out.refs.add(
@@ -85,15 +87,6 @@ public with sharing class HumanitixRecordBuilder {
                         }
                         continue;
                     }
-                    Object value = HumanitixTypeCoercer.coerce(
-                        HumanitixJsonNavigator.valueAt(f.sourcePath, c.record, c.parent, c.root),
-                        f.dataType,
-                        f.transform,
-                        f.transformArg,
-                        c.record,
-                        c.parent,
-                        c.root
-                    );
                     if (value == null && !f.overwriteBlank) {
                         continue; // leave existing value intact
                     }
