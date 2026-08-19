@@ -456,6 +456,12 @@ CMTS["Humanitix_Field_Mapping__mdt"] = dict(
           helpText="Optional argument. For Reference data type: '<TargetObject>.<ExternalIdField>'. "
                    "For IsoToDateInTz: the timezone path. For Concat: the prefix path/literal. "
                    "For StaticValue: the literal value."),
+        T("Default_Source_Path__c", label="Default Source Path",
+          helpText="Humanitix JSON path tried when the mapped value is blank after its Transform, "
+                   "e.g. _id, email or $parent.name. Leave blank for no path fallback."),
+        T("Default_Value__c", label="Default Value",
+          helpText="Fixed text used when both the mapped value and the Default Source Path are blank. "
+                   "It goes through the same Transform and Data Type coercion as the mapped value."),
         dict(api="Is_External_Id__c", type="checkbox", default=False, label="Is External Id"),
         dict(api="Overwrite_Blank__c", type="checkbox", default=True, label="Overwrite With Blank"),
         dict(api="Is_Active__c", type="checkbox", default=True, label="Is Active"),

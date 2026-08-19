@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Default_Value__c</fullName>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <label>Default Value</label>
+    <inlineHelpText>Fixed text used when both the mapped value and the Default Source Path are blank. It goes through the same Transform and Data Type coercion as the mapped value.</inlineHelpText>
+    <type>Text</type>
+    <length>255</length>
+    <required>false</required>
+</CustomField>
