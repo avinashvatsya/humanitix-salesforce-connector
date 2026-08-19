@@ -3,6 +3,11 @@
  * by a target Salesforce field. Pure and side-effect free so it is trivial to unit
  * test with static fixtures.
  *
+ * Field-mapping fallbacks: when the transformed Humanitix value is blank, the
+ * value at the mapping's Default Source Path is tried, then its fixed Default
+ * Value; the winner goes through the same transform and data type (see the
+ * fallback-aware coerce overload and resolve()).
+ *
  * Transforms: None, Trim, Upper, Lower, IsoToDateTime, IsoToDateInTz, DecimalMoney,
  * BoolMap, StaticValue, Concat, JoinArray, ToJson.
  * Data types:  Text, LongText, Email, Phone, Url, DateTime, Date, Decimal, Currency,
@@ -13,6 +18,7 @@
  * a straight Decimal pass-through — never divide by 100.
  */
 public with sharing class HumanitixTypeCoercer {
+    /** Transform + coerce with no fallbacks (callers and tests that hold no field mapping). */
     public static Object coerce(
         Object raw,
         String dataType,
@@ -22,12 +28,76 @@ public with sharing class HumanitixTypeCoercer {
         Map<String, Object> parent,
         Map<String, Object> root
     ) {
+        return coerce(raw, dataType, transform, transformArg, null, null, record, parent, root);
+    }
+
+    /**
+     * Transform + coerce with the field-mapping fallbacks. When the transformed
+     * Humanitix value is blank (null or a whitespace-only string), the value at
+     * defaultSourcePath is transformed and used instead; when that is blank too,
+     * the fixed defaultValue is transformed and used. Blankness is judged after
+     * the transform and before type coercion, so a Trim/JoinArray result of ""
+     * still triggers the fallback and a Boolean default is honoured (null is not
+     * turned into false first). StaticValue ignores both fallbacks.
+     */
+    public static Object coerce(
+        Object raw,
+        String dataType,
+        String transform,
+        String transformArg,
+        String defaultSourcePath,
+        String defaultValue,
+        Map<String, Object> record,
+        Map<String, Object> parent,
+        Map<String, Object> root
+    ) {
         String t = String.isBlank(transform) ? 'None' : transform;
         if (t == 'StaticValue') {
             return coerceType(transformArg, dataType);
         }
         Object v = applyTransform(raw, t, transformArg, record, parent, root);
+        if (isBlankValue(v) && String.isNotBlank(defaultSourcePath)) {
+            Object fallback = HumanitixJsonNavigator.valueAt(defaultSourcePath, record, parent, root);
+            v = applyTransform(fallback, t, transformArg, record, parent, root);
+        }
+        if (isBlankValue(v) && String.isNotBlank(defaultValue)) {
+            v = applyTransform(defaultValue, t, transformArg, record, parent, root);
+        }
         return coerceType(v, dataType);
+    }
+
+    /**
+     * Resolves what one field mapping writes for a record context: the value at
+     * its Source Path with the fallbacks applied, transformed and coerced.
+     * Reference mappings are coerced as Text with no transform arg, because their
+     * arg slot holds the Object.ExternalIdField the RelationshipResolver matches on.
+     */
+    public static Object resolve(
+        HumanitixMappingConfig.FieldMapping f,
+        Map<String, Object> record,
+        Map<String, Object> parent,
+        Map<String, Object> root
+    ) {
+        Boolean isReference = f.dataType == 'Reference';
+        return coerce(
+            HumanitixJsonNavigator.valueAt(f.sourcePath, record, parent, root),
+            isReference ? 'Text' : f.dataType,
+            f.transform,
+            isReference ? null : f.transformArg,
+            f.defaultSourcePath,
+            f.defaultValue,
+            record,
+            parent,
+            root
+        );
+    }
+
+    /** Blank means "Humanitix has nothing here": null, or a whitespace-only string. */
+    private static Boolean isBlankValue(Object v) {
+        if (v == null) {
+            return true;
+        }
+        return (v instanceof String) && String.isBlank((String) v);
     }
 
     private static Object applyTransform(

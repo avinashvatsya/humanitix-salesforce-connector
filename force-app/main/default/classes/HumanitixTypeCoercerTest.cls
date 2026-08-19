@@ -96,4 +96,87 @@ private class HumanitixTypeCoercerTest {
         Object v = coerce(1000, 'Integer', 'None', null);
         System.assertEquals(1000, (Decimal) v);
     }
+
+    private static Object coerceWithDefaults(
+        Object raw,
+        String type,
+        String transform,
+        String defaultPath,
+        String defaultValue,
+        Map<String, Object> rec
+    ) {
+        return HumanitixTypeCoercer.coerce(raw, type, transform, null, defaultPath, defaultValue, rec, null, rec);
+    }
+
+    @IsTest
+    static void defaultsPreferValueThenPathThenFixed() {
+        Map<String, Object> rec = new Map<String, Object>{ '_id' => 'ord_1' };
+        System.assertEquals('Fellowship', coerceWithDefaults('Fellowship', 'Text', 'None', '_id', 'Unknown', rec), 'a present value wins');
+        System.assertEquals('ord_1', coerceWithDefaults(null, 'Text', 'None', '_id', 'Unknown', rec), 'the default path is tried next');
+        System.assertEquals('Unknown', coerceWithDefaults(null, 'Text', 'None', 'missing', 'Unknown', rec), 'the fixed value is last');
+        System.assertEquals(null, coerceWithDefaults(null, 'Text', 'None', 'missing', null, rec), 'no default means null, as before');
+    }
+
+    @IsTest
+    static void blankAfterTransformFallsThroughToTheDefault() {
+        Map<String, Object> rec = new Map<String, Object>();
+        System.assertEquals('Unknown', coerceWithDefaults('   ', 'Text', 'Trim', null, 'Unknown', rec), 'Trim to "" is blank');
+        System.assertEquals('Unknown', coerceWithDefaults(new List<Object>(), 'Text', 'JoinArray', null, 'Unknown', rec), 'JoinArray of [] is blank');
+        System.assertEquals('', coerceWithDefaults('', 'Text', 'None', null, null, rec), 'without a default an empty string is written as is');
+    }
+
+    @IsTest
+    static void defaultGoesThroughTheTransformAndDataType() {
+        Map<String, Object> rec = new Map<String, Object>();
+        System.assertEquals('unknown', coerceWithDefaults(null, 'Text', 'Lower', null, 'UNKNOWN', rec), 'the transform applies to the default');
+        Object dt = coerceWithDefaults(null, 'DateTime', 'IsoToDateTime', null, '2026-01-01T00:00:00.000Z', rec);
+        System.assert(dt instanceof Datetime, 'the default must parse like a source value');
+        System.assertEquals(2026, ((Datetime) dt).yearGmt());
+        System.assertEquals(250, (Decimal) coerceWithDefaults(null, 'Integer', 'None', null, '250', rec), 'the data type coerces the default');
+    }
+
+    @IsTest
+    static void booleanDefaultIsHonouredInsteadOfFalse() {
+        Map<String, Object> rec = new Map<String, Object>();
+        System.assertEquals(true, (Boolean) coerceWithDefaults(null, 'Boolean', 'BoolMap', null, 'true', rec));
+        System.assertEquals(true, (Boolean) coerceWithDefaults(null, 'Boolean', 'None', null, 'yes', rec));
+        System.assertEquals(false, (Boolean) coerceWithDefaults(null, 'Boolean', 'None', null, null, rec), 'no default keeps the unchecked fallback');
+        System.assertEquals(false, (Boolean) coerceWithDefaults(false, 'Boolean', 'None', null, 'true', rec), 'an explicit false is a value, not a blank');
+    }
+
+    @IsTest
+    static void staticValueIgnoresDefaults() {
+        Map<String, Object> rec = new Map<String, Object>();
+        Object v = HumanitixTypeCoercer.coerce(null, 'Text', 'StaticValue', 'In Progress', 'missing', 'Unknown', rec, null, rec);
+        System.assertEquals('In Progress', (String) v, 'StaticValue short-circuits before the fallbacks');
+    }
+
+    @IsTest
+    static void uncoercibleDefaultThrowsLikeAnyBadValue() {
+        Boolean threw = false;
+        try {
+            coerceWithDefaults(null, 'Decimal', 'None', null, 'abc', new Map<String, Object>());
+        } catch (Exception e) {
+            threw = true;
+        }
+        System.assert(threw, 'a default the Data Type cannot coerce must surface as an exception');
+    }
+
+    @IsTest
+    static void resolveReadsTheMappingAndTreatsReferenceAsText() {
+        HumanitixMappingConfig.FieldMapping f = new HumanitixMappingConfig.FieldMapping();
+        f.sourcePath = 'eventId';
+        f.targetField = 'Humanitix_Event__c';
+        f.dataType = 'Reference';
+        f.transform = 'None';
+        f.transformArg = 'Humanitix_Event__c.Humanitix_Id__c';
+        f.defaultSourcePath = '$parent._id';
+        Map<String, Object> parent = new Map<String, Object>{ '_id' => 'evt_1' };
+        Map<String, Object> rec = new Map<String, Object>{ '_id' => 'tt_1' };
+
+        System.assertEquals('evt_1', (String) HumanitixTypeCoercer.resolve(f, rec, parent, parent), 'the reference key falls back to the default path');
+
+        rec.put('eventId', 'evt_2');
+        System.assertEquals('evt_2', (String) HumanitixTypeCoercer.resolve(f, rec, parent, parent), 'a present key wins');
+    }
 }
