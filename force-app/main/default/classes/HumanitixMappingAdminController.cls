@@ -258,6 +258,14 @@ public with sharing class HumanitixMappingAdminController {
             if (String.isNotBlank(fm.transform) && !TRANSFORMS.contains(fm.transform)) {
                 problems.add('Field mapping ' + rowName + ' has an unknown transform: ' + fm.transform + '.');
             }
+            if (fm.transform == 'StaticValue') {
+                if (String.isBlank(fm.transformArg)) {
+                    problems.add('Field mapping ' + rowName + ' uses StaticValue and needs the literal in Transform Arg.');
+                }
+                if (String.isNotBlank(fm.defaultSourcePath) || String.isNotBlank(fm.defaultValue)) {
+                    problems.add('Field mapping ' + rowName + ' uses StaticValue, which ignores Default Source Path and Default Value; clear them or choose another transform.');
+                }
+            }
         }
         return problems;
     }

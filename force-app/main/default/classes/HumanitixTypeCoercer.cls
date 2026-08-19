@@ -68,9 +68,10 @@ public with sharing class HumanitixTypeCoercer {
 
     /**
      * Resolves what one field mapping writes for a record context: the value at
-     * its Source Path with the fallbacks applied, transformed and coerced.
-     * Reference mappings are coerced as Text with no transform arg, because their
-     * arg slot holds the Object.ExternalIdField the RelationshipResolver matches on.
+     * its Source Path with the fallbacks applied, transformed and coerced. A
+     * Reference mapping's Transform Arg is the Object.ExternalIdField the
+     * RelationshipResolver matches on, never a transform argument, so it is
+     * withheld from the transform here (Reference values coerce as text).
      */
     public static Object resolve(
         HumanitixMappingConfig.FieldMapping f,
@@ -78,12 +79,11 @@ public with sharing class HumanitixTypeCoercer {
         Map<String, Object> parent,
         Map<String, Object> root
     ) {
-        Boolean isReference = f.dataType == 'Reference';
         return coerce(
             HumanitixJsonNavigator.valueAt(f.sourcePath, record, parent, root),
-            isReference ? 'Text' : f.dataType,
+            f.dataType,
             f.transform,
-            isReference ? null : f.transformArg,
+            f.dataType == 'Reference' ? null : f.transformArg,
             f.defaultSourcePath,
             f.defaultValue,
             record,

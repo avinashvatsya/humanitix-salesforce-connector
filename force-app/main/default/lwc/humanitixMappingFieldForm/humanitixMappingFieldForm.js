@@ -37,6 +37,7 @@ const NOTIFICATION_BASE = 'slds-scoped-notification slds-media slds-media_center
 const NO_TARGET_FIELD = 'Choose a target field.';
 const NO_SOURCE_PATH =
   'Enter a source path, set a Default Source Path or Default Value, or choose the StaticValue transform.';
+const STATIC_NEEDS_ARG = 'StaticValue writes the literal in Transform Arg; enter one.';
 const BAD_REFERENCE =
   'A Reference field needs a transform arg in the form Object.ExternalIdField, for example Humanitix_Event__c.Humanitix_Id__c.';
 
@@ -101,6 +102,15 @@ export default class HumanitixMappingFieldForm extends LightningElement {
    */
   get showTransformArg() {
     return this.transform !== 'None' || this.dataType === 'Reference';
+  }
+
+  /** StaticValue writes its literal and ignores both defaults, so the inputs hide. */
+  get showDefaults() {
+    return !this.isStaticValue;
+  }
+
+  get isStaticValue() {
+    return this.transform === 'StaticValue';
   }
 
   get hasProblems() {
@@ -192,8 +202,11 @@ export default class HumanitixMappingFieldForm extends LightningElement {
     }
     const hasSource =
       hasText(this.sourcePath) || hasText(this.defaultSourcePath) || hasText(this.defaultValue);
-    if (this.transform !== 'StaticValue' && !hasSource) {
+    if (!this.isStaticValue && !hasSource) {
       problems.push(NO_SOURCE_PATH);
+    }
+    if (this.isStaticValue && !hasText(this.transformArg)) {
+      problems.push(STATIC_NEEDS_ARG);
     }
     if (this.dataType === 'Reference' && this.transformArg.indexOf('.') < 1) {
       problems.push(BAD_REFERENCE);
@@ -211,8 +224,8 @@ export default class HumanitixMappingFieldForm extends LightningElement {
       dataType: this.dataType,
       transform: this.transform,
       transformArg: trimmedOrNull(this.transformArg),
-      defaultSourcePath: trimmedOrNull(this.defaultSourcePath),
-      defaultValue: trimmedOrNull(this.defaultValue),
+      defaultSourcePath: this.isStaticValue ? null : trimmedOrNull(this.defaultSourcePath),
+      defaultValue: this.isStaticValue ? null : trimmedOrNull(this.defaultValue),
       isExternalId: this.isExternalId === true,
       overwriteBlank: this.overwriteBlank === true,
       active: this.active === true

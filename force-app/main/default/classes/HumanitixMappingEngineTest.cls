@@ -327,10 +327,16 @@ private class HumanitixMappingEngineTest {
             Test.startTest();
             HumanitixMappingEngine.run('Event', HumanitixTestDataFactory.events());
             HumanitixMappingEngine.run('Order', orders);
+            Contact placeholder = [SELECT LastName FROM Contact WHERE Humanitix_Contact_Key__c = 'frodo@shire.com'];
+            System.assertEquals('Unknown', placeholder.LastName, 'the shipped Contact.LastName default must fill a missing last name');
+
+            // A later order carrying the real surname replaces the placeholder even
+            // though Order_to_Contact runs BlanksOnly.
+            HumanitixMappingEngine.run('Order', HumanitixTestDataFactory.orders());
             Test.stopTest();
         }
         Contact c = [SELECT LastName FROM Contact WHERE Humanitix_Contact_Key__c = 'frodo@shire.com'];
-        System.assertEquals('Unknown', c.LastName, 'the shipped Contact.LastName default must fill a missing last name');
+        System.assertEquals('Baggins', c.LastName, 'a connector placeholder must yield to a later real value under BlanksOnly');
     }
 
     @IsTest
@@ -366,5 +372,43 @@ private class HumanitixMappingEngineTest {
         System.assertEquals(2, byKey.size(), 'both orders must produce a Lead');
         System.assertEquals('Fellowship', byKey.get('frodo@shire.com').Company, 'a present organisation wins');
         System.assertEquals('Unknown', byKey.get('sam@shire.com').Company, 'a missing organisation falls back to the shipped default');
+    }
+
+    @IsTest
+    static void validateRejectsAStaticValueLiteralTheDataTypeCannotCoerce() {
+        HumanitixMappingConfig cfg = new HumanitixMappingConfig();
+        HumanitixMappingConfig.ObjectMapping m = new HumanitixMappingConfig.ObjectMapping();
+        m.devName = 'Bad_Static_Mapping';
+        m.sourceResource = 'Event';
+        m.targetSObject = 'Humanitix_Event__c';
+        m.externalIdField = 'Humanitix_Id__c';
+        m.matchStrategy = 'ExternalId';
+        m.loadOrder = 1;
+        m.active = true;
+        HumanitixMappingConfig.FieldMapping id = new HumanitixMappingConfig.FieldMapping();
+        id.sourcePath = '_id';
+        id.targetField = 'Humanitix_Id__c';
+        id.dataType = 'Text';
+        id.transform = 'None';
+        id.active = true;
+        HumanitixMappingConfig.FieldMapping cap = new HumanitixMappingConfig.FieldMapping();
+        cap.targetField = 'Total_Capacity__c';
+        cap.dataType = 'Integer';
+        cap.transform = 'StaticValue';
+        cap.transformArg = 'abc';
+        cap.defaultValue = '5'; // ignored by StaticValue and must not be blamed
+        cap.active = true;
+        m.fields.add(id);
+        m.fields.add(cap);
+        cfg.objectMappings.add(m);
+
+        List<String> errors = cfg.validate();
+
+        System.assertEquals(1, errors.size(), 'exactly one problem expected; got: ' + errors);
+        System.assert(errors[0].contains('Transform Arg "abc"'), 'the StaticValue literal is the culprit: ' + errors[0]);
+        System.assert(!errors[0].contains('Default Value'), 'the ignored default must not be blamed: ' + errors[0]);
+
+        cap.transformArg = '250';
+        System.assertEquals(0, cfg.validate().size(), 'a coercible literal validates cleanly');
     }
 }
