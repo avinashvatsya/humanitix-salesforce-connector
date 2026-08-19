@@ -143,6 +143,8 @@ describe('c-humanitix-mapping-field-form', () => {
     expect(dto.dataType).toBe('Text');
     expect(dto.transform).toBe('None');
     expect(dto.transformArg).toBeNull();
+    expect(dto.defaultSourcePath).toBeNull();
+    expect(dto.defaultValue).toBeNull();
     expect(dto.overwriteBlank).toBe(true);
     expect(dto.active).toBe(true);
   });
@@ -233,5 +235,67 @@ describe('c-humanitix-mapping-field-form', () => {
 
     expect(cancelled).toHaveBeenCalledTimes(1);
     expect(queued).not.toHaveBeenCalled();
+  });
+
+  it('renders the default inputs and queues them trimmed in the DTO', async () => {
+    const element = await create();
+    const queued = listenForQueue(element);
+
+    expect(inputByLabel(element, 'Default Source Path')).not.toBeNull();
+    expect(inputByLabel(element, 'Default Value')).not.toBeNull();
+
+    setInput(element, 'Source Path', 'organisation');
+    chooseCombobox(element, 'Target Field', 'Name');
+    setInput(element, 'Default Source Path', ' _id ');
+    setInput(element, 'Default Value', ' Unknown ');
+    await settle();
+
+    click(element, 'Queue change');
+    await settle();
+
+    expect(queued).toHaveBeenCalledTimes(1);
+    const dto = queued.mock.calls[0][0].detail;
+    expect(dto.defaultSourcePath).toBe('_id');
+    expect(dto.defaultValue).toBe('Unknown');
+  });
+
+  it('accepts a mapping with no source path when a default is set', async () => {
+    const element = await create();
+    const queued = listenForQueue(element);
+
+    chooseCombobox(element, 'Target Field', 'Name');
+    setInput(element, 'Default Value', 'Unknown');
+    await settle();
+
+    click(element, 'Queue change');
+    await settle();
+
+    expect(queued).toHaveBeenCalledTimes(1);
+    const dto = queued.mock.calls[0][0].detail;
+    expect(dto.sourcePath).toBeNull();
+    expect(dto.defaultValue).toBe('Unknown');
+  });
+
+  it('still blocks a mapping with neither a source path nor a default', async () => {
+    const element = await create();
+    const queued = listenForQueue(element);
+
+    chooseCombobox(element, 'Target Field', 'Name');
+    await settle();
+
+    click(element, 'Queue change');
+    await settle();
+
+    expect(queued).not.toHaveBeenCalled();
+    expect(text(element)).toContain('Enter a source path');
+  });
+
+  it('pre-fills the defaults of an existing mapping', async () => {
+    const element = await create({
+      mapping: { ...EXISTING, defaultSourcePath: '_id', defaultValue: 'Unknown' }
+    });
+
+    expect(inputByLabel(element, 'Default Source Path').value).toBe('_id');
+    expect(inputByLabel(element, 'Default Value').value).toBe('Unknown');
   });
 });
