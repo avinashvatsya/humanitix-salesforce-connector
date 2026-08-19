@@ -273,4 +273,47 @@ private class HumanitixMappingEngineTest {
         System.assertEquals('_id', f.defaultSourcePath, 'Default_Source_Path__c must load into defaultSourcePath');
         System.assertEquals('Unknown', f.defaultValue, 'Default_Value__c must load into defaultValue');
     }
+
+    @IsTest
+    static void validateRejectsADefaultValueTheDataTypeCannotCoerce() {
+        HumanitixMappingConfig cfg = new HumanitixMappingConfig();
+        HumanitixMappingConfig.ObjectMapping m = new HumanitixMappingConfig.ObjectMapping();
+        m.devName = 'Bad_Default_Mapping';
+        m.sourceResource = 'Event';
+        m.targetSObject = 'Humanitix_Event__c';
+        m.externalIdField = 'Humanitix_Id__c';
+        m.matchStrategy = 'ExternalId';
+        m.loadOrder = 1;
+        m.active = true;
+        HumanitixMappingConfig.FieldMapping id = new HumanitixMappingConfig.FieldMapping();
+        id.sourcePath = '_id';
+        id.targetField = 'Humanitix_Id__c';
+        id.dataType = 'Text';
+        id.transform = 'None';
+        id.active = true;
+        HumanitixMappingConfig.FieldMapping cap = new HumanitixMappingConfig.FieldMapping();
+        cap.sourcePath = 'totalCapacity';
+        cap.targetField = 'Total_Capacity__c';
+        cap.dataType = 'Integer';
+        cap.transform = 'None';
+        cap.defaultValue = 'lots';
+        cap.active = true;
+        m.fields.add(id);
+        m.fields.add(cap);
+        cfg.objectMappings.add(m);
+
+        List<String> errors = cfg.validate();
+
+        Boolean found = false;
+        for (String e : errors) {
+            if (e.contains('Default Value "lots"') && e.contains('Integer')) {
+                found = true;
+            }
+        }
+        System.assert(found, 'validate() must flag a default the Data Type cannot coerce; got: ' + errors);
+
+        cap.defaultValue = '250';
+        List<String> clean = cfg.validate();
+        System.assertEquals(0, clean.size(), 'a coercible default must validate cleanly; got: ' + clean);
+    }
 }

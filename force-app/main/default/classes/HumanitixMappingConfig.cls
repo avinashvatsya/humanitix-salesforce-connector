@@ -50,6 +50,7 @@ public with sharing class HumanitixMappingConfig {
     private static Map<String, Schema.SObjectType> globalDescribeCache;
     private static final Set<String> VALID_UPDATE_MODES = new Set<String>{ 'Always', 'BlanksOnly', 'Never' };
     private static final Set<String> VALID_MATCH_STRATEGIES = new Set<String>{ 'ExternalId', 'MatchByFields', 'AlwaysCreate' };
+    private static final Map<String, Object> EMPTY_RECORD = new Map<String, Object>();
 
     /** Cached global describe — avoids re-materializing describes per mapping/DML. */
     public static Map<String, Schema.SObjectType> globalDescribe() {
@@ -257,6 +258,9 @@ public with sharing class HumanitixMappingConfig {
                 if (f.dataType == 'Reference' && String.isNotBlank(f.transformArg)) {
                     validateReference(gd, f.transformArg, m.devName, errors);
                 }
+                if (String.isNotBlank(f.defaultValue)) {
+                    validateDefaultValue(f, m.devName, errors);
+                }
             }
             if (usesExtId && String.isNotBlank(m.externalIdField) && !populatesExtId) {
                 errors.add('Object Mapping "' + m.devName + '": no active field mapping populates external id field "' + m.externalIdField + '".');
@@ -283,6 +287,24 @@ public with sharing class HumanitixMappingConfig {
         }
         if (!st.getDescribe().fields.getMap().containsKey(parts[1].toLowerCase())) {
             errors.add('Field Mapping on "' + mappingName + '": unknown reference field "' + arg + '".');
+        }
+    }
+
+    /**
+     * Dry-runs the fixed default through the mapping's Transform and Data Type
+     * against an empty record, so a default that cannot be coerced (say "abc"
+     * for a Decimal field) fails the run before any DML, like every other
+     * configuration mistake.
+     */
+    private void validateDefaultValue(FieldMapping f, String mappingName, List<String> errors) {
+        try {
+            HumanitixTypeCoercer.resolve(f, EMPTY_RECORD, null, EMPTY_RECORD);
+        } catch (Exception e) {
+            String how = (String.isBlank(f.transform) || f.transform == 'None')
+                ? f.dataType
+                : f.dataType + ' with transform ' + f.transform;
+            errors.add('Field Mapping on "' + mappingName + '": Default Value "' + f.defaultValue + '" for ' +
+                f.targetField + ' is not a valid ' + how + '.');
         }
     }
 
