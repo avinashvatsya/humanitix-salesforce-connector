@@ -258,7 +258,7 @@ private class HumanitixSyncQueueableTest {
         System.assertEquals('Success', entry.Status__c);
         System.assertEquals(0, entry.Records_Processed__c);
         System.assert(entry.Error_Message__c.contains('1 event(s) not selected, skipped'), entry.Error_Message__c);
-        System.assertEquals(1, [SELECT COUNT() FROM Humanitix_Sync_State__c WHERE Cursor_Key__c = 'events'], 'An all-filtered page still promotes the cursor');
+        System.assertEquals(0, [SELECT COUNT() FROM Humanitix_Sync_State__c WHERE Cursor_Key__c = 'events'], 'Selected mode never moves the events cursor');
     }
 
     @IsTest

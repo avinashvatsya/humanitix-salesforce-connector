@@ -101,8 +101,9 @@ parsed record whose `_id` is not in `selectedEventIds` before calling
 `HumanitixMappingEngine.run`, so unselected events produce no records of any
 kind. The page's log entry message records `N event(s) not selected, skipped`
 (joined with any mapping errors); `recordsProcessed` counts mapped records only.
-A page whose every record is filtered is still a successful page, and cursor
-promotion is unchanged.
+A page whose every record is filtered is still a successful page. Selected mode
+does not promote the events cursor, so switching back to All resumes from the
+last All or FutureOnly run and picks up events that were skipped.
 
 **Orders and Tickets phases.** `HumanitixSyncStateService.nextEventId` gains an
 overload `nextEventId(String afterId, Set<String> onlyIds)`; a non-null set adds
@@ -414,8 +415,8 @@ returns on upgrade is not currently true. Two changes:
 - `HumanitixSyncLauncherTest`: snapshot of the new state fields; Selected with
   an empty list throws.
 - `HumanitixSyncQueueableTest`: Selected mode drops unselected events before
-  mapping with the skipped count in the log entry; an all-filtered page still
-  promotes the cursor; `inFutureOnly` is never sent in Selected mode; Orders
+  mapping with the skipped count in the log entry; an all-filtered page leaves the
+  events cursor alone; `inFutureOnly` is never sent in Selected mode; Orders
   and Tickets iterate only selected events; `nextEventId` overload.
 - `HumanitixSyncSettingsControllerTest`: DTO round trip for the new fields;
   every validation rule; `fetchHumanitixEvents` against `HumanitixCalloutMock`
