@@ -201,11 +201,17 @@ public with sharing class HumanitixSyncSettingsController {
         try {
             res = new HumanitixHttpClient(HumanitixSyncConfig.namedCredentialName()).get(path);
         } catch (Exception e) {
-            throw auraError('Humanitix could not be reached: ' + e.getMessage());
+            throw auraError(calloutFailureMessage(e.getMessage()));
         }
         Integer status = res.getStatusCode();
         if (status < 200 || status > 299) {
-            throw auraError('Humanitix returned HTTP ' + status + '. Check the API key on the Connection tab.');
+            if (status == 401 || status == 403) {
+                throw auraError('Humanitix returned HTTP ' + status + '. Check the API key on the Connection tab.');
+            }
+            if (status == 429 || (status >= 500 && status <= 599)) {
+                throw auraError('Humanitix is busy or unavailable (HTTP ' + status + '). Try Refresh in a minute.');
+            }
+            throw auraError('Humanitix returned HTTP ' + status + '.');
         }
         HumanitixApiResponse api = HumanitixApiResponse.parse(res.getBody(), 'events', status);
         EventPageDto out = new EventPageDto();
@@ -229,6 +235,15 @@ public with sharing class HumanitixSyncSettingsController {
             }
         }
         return out;
+    }
+
+    /** The platform says "does not exist" when the external credential has no ApiKey parameter yet. */
+    @TestVisible
+    private static String calloutFailureMessage(String platformMessage) {
+        if (platformMessage != null && platformMessage.contains('does not exist')) {
+            return 'Add your Humanitix API key on the Connection tab, then try again.';
+        }
+        return 'Humanitix could not be reached: ' + platformMessage;
     }
 
     private static String textOf(Object o) {
