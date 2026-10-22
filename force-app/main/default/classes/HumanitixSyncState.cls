@@ -22,6 +22,8 @@ public class HumanitixSyncState {
     // settings snapshot (taken at launch so a mid-run config change can't corrupt a run)
     public Integer pageSize = 100;
     public Boolean inFutureOnly = false;
+    public String eventSelection = 'All';
+    public List<String> selectedEventIds = new List<String>();
     public String ticketStatusFilter;
     public Integer maxRetries = 5;
     public Integer retryDelayMinutes = 5;
