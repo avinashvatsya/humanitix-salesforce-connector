@@ -1053,6 +1053,11 @@
         <readable>true</readable>
         <editable>true</editable>
     </fieldPermissions>
+    <fieldPermissions>
+        <field>Account.Humanitix_Event_Id__c</field>
+        <readable>true</readable>
+        <editable>true</editable>
+    </fieldPermissions>
     <hasActivationRequired>false</hasActivationRequired>
     <label>Humanitix Integration Admin</label>
     <objectPermissions>

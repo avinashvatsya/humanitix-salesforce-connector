@@ -182,6 +182,9 @@ MAPPINGS.append(om(
         fm("email", "Email", "Email", "Lower"), fm("mobile", "MobilePhone", "Phone"),
         fm("organisation", "Humanitix_Organisation__c"),
         fm("_id", "Humanitix_Last_Order_Id__c"),
+        # 1.3: Contact account = Event account links buyers without an Account to
+        # their event's Account. Inactive until chosen on the Sync Settings tab.
+        fm("eventId", "AccountId", "Reference", arg="Account.Humanitix_Event_Id__c", overwrite=False, active=False),
     ]))
 
 # F) Order -> Humanitix_Order__c (faithful staging + links to Event & buyer Contact)
@@ -332,6 +335,17 @@ MAPPINGS.append(om(
     fields=[
         fm("organisation", "Humanitix_Organisation_Key__c", "Text", "Lower", extid=True),
         fm("organisation", "Name"),
+    ]))
+
+# N) Event -> Account (OPTIONAL, inactive): Contact account = Event account
+MAPPINGS.append(om(
+    "Event_to_Account", "Event to Account (optional)", "Event", "Account",
+    ext_id_field="Humanitix_Event_Id__c", load=14, active=False,
+    description="OPTIONAL: one Account per Humanitix event, named Humanitix - Event Name. Turned on by "
+                "Contact account = Event account on the Sync Settings tab, together with Order_to_Contact_08.",
+    fields=[
+        fm("_id", "Humanitix_Event_Id__c", extid=True),
+        fm("name", "Name", "Text", "Template", arg="Humanitix - {value}"),
     ]))
 
 

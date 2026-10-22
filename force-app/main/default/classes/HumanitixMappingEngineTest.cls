@@ -442,4 +442,52 @@ private class HumanitixMappingEngineTest {
             errors[0]
         );
     }
+
+    /** Shipped defaults with Contact account = Event account switched on, in memory. */
+    private static void useEventAccountMappings() {
+        List<Humanitix_Object_Mapping__mdt> oms = HumanitixDefaultMappings.objectMappings();
+        for (Humanitix_Object_Mapping__mdt om : oms) {
+            if (om.DeveloperName == 'Event_to_Account') {
+                om.Is_Active__c = true;
+            }
+        }
+        List<Humanitix_Field_Mapping__mdt> fms = HumanitixDefaultMappings.fieldMappings();
+        for (Humanitix_Field_Mapping__mdt fm : fms) {
+            if (fm.DeveloperName == 'Order_to_Contact_08') {
+                fm.Is_Active__c = true;
+            }
+        }
+        HumanitixMappingConfig.setInstance(HumanitixMappingConfig.fromRecords(oms, fms));
+    }
+
+    @IsTest
+    static void eventAccountLinksNewBuyersToTheEventAccount() {
+        useEventAccountMappings();
+        System.runAs(HumanitixTestDataFactory.marketingAdmin()) {
+            Test.startTest();
+            HumanitixMappingEngine.run('Event', HumanitixTestDataFactory.events());
+            HumanitixMappingEngine.run('Order', HumanitixTestDataFactory.orders());
+            Test.stopTest();
+        }
+        Account acct = [SELECT Id, Name FROM Account WHERE Humanitix_Event_Id__c = :HumanitixTestDataFactory.EVENT_ID];
+        System.assertEquals('Humanitix - Hobbit Dance Off', acct.Name);
+        Contact c = [SELECT AccountId FROM Contact WHERE Humanitix_Contact_Key__c = 'frodo@shire.com'];
+        System.assertEquals(acct.Id, c.AccountId, 'A new buyer joins the event Account');
+    }
+
+    @IsTest
+    static void eventAccountLeavesAnExistingContactAccountAlone() {
+        Account household = new Account(Name = 'Baggins Household');
+        insert household;
+        insert new Contact(LastName = 'Baggins', Email = 'frodo@shire.com', AccountId = household.Id);
+        useEventAccountMappings();
+        System.runAs(HumanitixTestDataFactory.marketingAdmin()) {
+            Test.startTest();
+            HumanitixMappingEngine.run('Event', HumanitixTestDataFactory.events());
+            HumanitixMappingEngine.run('Order', HumanitixTestDataFactory.orders());
+            Test.stopTest();
+        }
+        Contact c = [SELECT AccountId FROM Contact WHERE Email = 'frodo@shire.com'];
+        System.assertEquals(household.Id, c.AccountId, 'BlanksOnly never replaces an existing Account');
+    }
 }

@@ -87,4 +87,44 @@ private class HumanitixDefaultMappingsTest {
         List<String> errors = cfg.validate();
         System.assert(errors.isEmpty(), 'shipped default mappings must validate cleanly; got: ' + errors);
     }
+
+    @IsTest
+    static void eventAccountRecordsShipInactive() {
+        Map<String, Humanitix_Object_Mapping__mdt> oms = new Map<String, Humanitix_Object_Mapping__mdt>();
+        for (Humanitix_Object_Mapping__mdt om : HumanitixDefaultMappings.objectMappings()) {
+            oms.put(om.DeveloperName, om);
+        }
+        Map<String, Humanitix_Field_Mapping__mdt> fms = new Map<String, Humanitix_Field_Mapping__mdt>();
+        for (Humanitix_Field_Mapping__mdt fm : HumanitixDefaultMappings.fieldMappings()) {
+            fms.put(fm.DeveloperName, fm);
+        }
+
+        Humanitix_Object_Mapping__mdt ea = oms.get('Event_to_Account');
+        System.assertNotEquals(null, ea, 'Event_to_Account must ship');
+        System.assertEquals(false, ea.Is_Active__c);
+        System.assertEquals('Event', ea.Source_Resource__c);
+        System.assertEquals('Account', ea.Target_SObject__c);
+        System.assertEquals('Humanitix_Event_Id__c', ea.External_Id_Field__c);
+        System.assertEquals('ExternalId', ea.Match_Strategy__c);
+        System.assertEquals(14, ea.Load_Order__c);
+
+        Humanitix_Field_Mapping__mdt key = fms.get('Event_to_Account_01');
+        System.assertEquals('_id', key.Source_Path__c);
+        System.assertEquals('Humanitix_Event_Id__c', key.Target_Field__c);
+        System.assertEquals(true, key.Is_External_Id__c);
+
+        Humanitix_Field_Mapping__mdt name = fms.get('Event_to_Account_02');
+        System.assertEquals('Name', name.Target_Field__c);
+        System.assertEquals('Template', name.Transform__c);
+        System.assertEquals('Humanitix - {value}', name.Transform_Arg__c);
+
+        Humanitix_Field_Mapping__mdt link = fms.get('Order_to_Contact_08');
+        System.assertEquals('Order_to_Contact', link.Object_Mapping__c);
+        System.assertEquals('eventId', link.Source_Path__c);
+        System.assertEquals('AccountId', link.Target_Field__c);
+        System.assertEquals('Reference', link.Data_Type__c);
+        System.assertEquals('Account.Humanitix_Event_Id__c', link.Transform_Arg__c);
+        System.assertEquals(false, link.Overwrite_Blank__c);
+        System.assertEquals(false, link.Is_Active__c);
+    }
 }
