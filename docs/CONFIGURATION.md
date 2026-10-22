@@ -96,6 +96,14 @@ Things to know about **Selected events**:
   `Unknown event (<id>)` and can be removed.
 - Up to 1,000 events can be picked. The picker lists up to 5,000 events.
 - A run will not start while Selected events has nothing picked.
+- Selected events lists all of your Humanitix events on every run (one API
+  page per 100 events) so a newly picked event is never missed. Large accounts
+  on a short delta interval may prefer a longer interval.
+- After switching from Selected events or Future events only back to All
+  events, run a full sync once so events that were skipped are brought in:
+  set **Since Mode** to `FullPull` on the Sync Settings tab and click **Run
+  Sync Now** on the Dashboard, then set **Since Mode** back. Or wait for the
+  daily full sync, if you have scheduled one.
 
 Orgs upgraded from 1.2 keep their previous behaviour until they choose an
 option: an empty Event Selection follows the older **In Future Only** setting.
