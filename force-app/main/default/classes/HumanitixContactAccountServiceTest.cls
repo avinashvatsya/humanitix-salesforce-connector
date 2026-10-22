@@ -61,4 +61,65 @@ private class HumanitixContactAccountServiceTest {
             System.assert(threw, 'expected a rejection for ' + mode);
         }
     }
+
+    private static Boolean personAccountsOn() {
+        return Schema.SObjectType.Account.fields.getMap().containsKey('ispersonaccount');
+    }
+
+    @IsTest
+    static void personAccountNeedsPersonAccountsEnabled() {
+        if (personAccountsOn()) {
+            return; // covered by the enabled-org tests below
+        }
+        System.assertEquals(false, HumanitixContactAccountService.personAccountsEnabled());
+        System.assertEquals(0, HumanitixContactAccountService.personRecordTypes().size());
+        String message;
+        try {
+            HumanitixContactAccountService.changesFor('PersonAccount', null);
+        } catch (HumanitixMappingException e) {
+            message = e.getMessage();
+        }
+        System.assertEquals('Person Accounts are not enabled in this org.', message);
+    }
+
+    @IsTest
+    static void personAccountSwitchesTheBuyerMappingAndSetsTheRecordType() {
+        if (!personAccountsOn()) {
+            return; // runs in the htx-pa scratch org
+        }
+        List<HumanitixContactAccountService.RecordTypeOption> types = HumanitixContactAccountService.personRecordTypes();
+        System.assert(!types.isEmpty(), 'A Person Account org has a person record type');
+        String rt = types[0].value;
+
+        HumanitixMappingAdminController.PendingChanges pending = HumanitixContactAccountService.changesFor('PersonAccount', rt);
+
+        Map<String, Boolean> objects = new Map<String, Boolean>();
+        for (HumanitixMappingAdminController.ObjectMappingDto o : pending.objectMappings) {
+            objects.put(o.devName, o.active);
+        }
+        System.assertEquals(new Map<String, Boolean>{ 'Order_to_Contact' => false, 'Order_to_PersonAccount' => true }, objects);
+        System.assertEquals(1, pending.fieldMappings.size());
+        System.assertEquals('Order_to_PersonAccount_08', pending.fieldMappings[0].devName);
+        System.assertEquals(rt, pending.fieldMappings[0].defaultValue);
+
+        Set<String> names = new Set<String>();
+        for (Metadata.CustomMetadata cmt : HumanitixMappingAdminController.deployRecordsFor(pending)) {
+            names.add(cmt.fullName);
+        }
+        System.assert(names.contains('Humanitix_Object_Mapping.Order_to_PersonAccount'), 'The __pc targets validate in a Person Account org');
+    }
+
+    @IsTest
+    static void personAccountRejectsARecordTypeThatIsNotAPersonType() {
+        if (!personAccountsOn()) {
+            return;
+        }
+        String message;
+        try {
+            HumanitixContactAccountService.changesFor('PersonAccount', 'not-an-id');
+        } catch (HumanitixMappingException e) {
+            message = e.getMessage();
+        }
+        System.assertEquals('Choose a person account record type.', message);
+    }
 }

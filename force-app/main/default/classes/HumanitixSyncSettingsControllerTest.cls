@@ -322,4 +322,28 @@ private class HumanitixSyncSettingsControllerTest {
         System.assertEquals(1, problems.size(), String.join(problems, ' | '));
         System.assert(problems[0].startsWith('Contact account must be'), problems[0]);
     }
+
+    @IsTest
+    static void getSyncSettingsDescribesPersonAccounts() {
+        HumanitixSyncSettingsController.SettingsDto dto = HumanitixSyncSettingsController.getSyncSettings();
+        System.assertEquals(HumanitixContactAccountService.personAccountsEnabled(), dto.personAccountsEnabled);
+        System.assertEquals(HumanitixContactAccountService.personRecordTypes().size(), dto.personRecordTypes.size());
+        System.assertEquals(HumanitixContactAccountService.currentPersonRecordTypeId(), dto.personRecordTypeId);
+    }
+
+    @IsTest
+    static void personAccountWithoutPersonAccountsIsRejectedOnSave() {
+        if (HumanitixContactAccountService.personAccountsEnabled()) {
+            return;
+        }
+        HumanitixSyncSettingsController.SettingsDto dto = validDto();
+        dto.contactAccount = 'PersonAccount';
+        String message;
+        try {
+            HumanitixSyncSettingsController.saveSyncSettings(JSON.serialize(dto));
+        } catch (AuraHandledException e) {
+            message = e.getMessage();
+        }
+        System.assertEquals('The Contact account change could not be applied: Person Accounts are not enabled in this org.', message);
+    }
 }
