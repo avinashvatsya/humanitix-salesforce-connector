@@ -98,15 +98,45 @@ private class HumanitixContactAccountServiceTest {
             objects.put(o.devName, o.active);
         }
         System.assertEquals(new Map<String, Boolean>{ 'Order_to_Contact' => false, 'Order_to_PersonAccount' => true }, objects);
-        System.assertEquals(1, pending.fieldMappings.size());
-        System.assertEquals('Order_to_PersonAccount_08', pending.fieldMappings[0].devName);
-        System.assertEquals(rt, pending.fieldMappings[0].defaultValue);
+        if (pending.fieldMappings.isEmpty()) {
+            // The record type default is already saved in this org.
+            HumanitixMappingAdminController.FieldMappingDto saved = HumanitixMappingAdminController.effectiveFieldMapping('Order_to_PersonAccount_08');
+            System.assertEquals(true, saved.active);
+            System.assertEquals(rt, String.valueOf(Id.valueOf(saved.defaultValue)));
+        } else {
+            System.assertEquals(1, pending.fieldMappings.size());
+            System.assertEquals('Order_to_PersonAccount_08', pending.fieldMappings[0].devName);
+            System.assertEquals(rt, pending.fieldMappings[0].defaultValue);
+        }
 
         Set<String> names = new Set<String>();
         for (Metadata.CustomMetadata cmt : HumanitixMappingAdminController.deployRecordsFor(pending)) {
             names.add(cmt.fullName);
         }
         System.assert(names.contains('Humanitix_Object_Mapping.Order_to_PersonAccount'), 'The __pc targets validate in a Person Account org');
+    }
+
+    private static HumanitixContactAccountService.RecordTypeOption option(String value) {
+        HumanitixContactAccountService.RecordTypeOption o = new HumanitixContactAccountService.RecordTypeOption();
+        o.value = value;
+        o.label = value;
+        return o;
+    }
+
+    @IsTest
+    static void pickPersonRecordTypeIgnoresAStaleSavedValue() {
+        String a = '012000000000001AAA';
+        String b = '012000000000002AAA';
+        List<HumanitixContactAccountService.RecordTypeOption> one = new List<HumanitixContactAccountService.RecordTypeOption>{ option(a) };
+        List<HumanitixContactAccountService.RecordTypeOption> two = new List<HumanitixContactAccountService.RecordTypeOption>{ option(a), option(b) };
+
+        System.assertEquals(b, HumanitixContactAccountService.pickPersonRecordType(b, two), 'saved id is available');
+        System.assertEquals(a, HumanitixContactAccountService.pickPersonRecordType(b, one), 'stale saved id falls back to the only type');
+        System.assertEquals(null, HumanitixContactAccountService.pickPersonRecordType(b, new List<HumanitixContactAccountService.RecordTypeOption>{ option(a), option('012000000000003AAA') }), 'stale with two types');
+        System.assertEquals(a, HumanitixContactAccountService.pickPersonRecordType(null, one), 'blank with one type');
+        System.assertEquals(null, HumanitixContactAccountService.pickPersonRecordType(null, two), 'blank with two types');
+        System.assertEquals(null, HumanitixContactAccountService.pickPersonRecordType(b, new List<HumanitixContactAccountService.RecordTypeOption>()), 'no types');
+        System.assertEquals(a, HumanitixContactAccountService.pickPersonRecordType(a.substring(0, 15), two), 'a 15 character id matches its 18 character form');
     }
 
     @IsTest
