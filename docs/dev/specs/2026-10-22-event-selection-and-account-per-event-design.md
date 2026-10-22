@@ -62,13 +62,14 @@ Two new fields on `Humanitix_Sync_Setting__mdt`, declared in
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `Event_Selection__c` | Picklist: `All`, `FutureOnly`, `Selected` | Which events the sync handles. Blank, or any value outside the three, resolves to the legacy behaviour: `In_Future_Only__c` true means `FutureOnly`, otherwise `All`. |
-| `Selected_Event_Ids__c` | Long Text Area (131,072) | Comma-separated Humanitix event ids. Read only in `Selected` mode, but kept across mode changes so switching back to Selected restores the previous list. |
+| `Selected_Event_Ids__c` | Long Text Area (32,768) | Comma-separated Humanitix event ids. Read only in `Selected` mode, but kept across mode changes so switching back to Selected restores the previous list. |
 
 `HumanitixSyncConfig` gains:
 
 - `eventSelection()`: the effective mode after the legacy resolution above.
-- `selectedEventIds()`: `Set<String>` of trimmed, non-blank, de-duplicated ids
-  (empty when blank).
+- `selectedEventIds()`: `List<String>` of trimmed, non-blank, de-duplicated ids
+  in saved order (empty when blank). It reads the field with SOQL rather than
+  `getInstance()`, so the full Long Text Area value is always returned.
 - `inFutureOnly()` now returns `eventSelection() == 'FutureOnly'`, so the
   existing callers keep working.
 
@@ -134,7 +135,7 @@ staged event.
   stays truthful for anyone reading it in Setup.
 - Validation, server side and mirrored client side: `eventSelection` must be
   one of the three values; Selected requires at least one id; each id must
-  match `^[A-Za-z0-9_-]{1,64}$`; ids are de-duplicated; at most 5,000 ids.
+  match `^[A-Za-z0-9_-]{1,64}$`; ids are de-duplicated; at most 1,000 ids (well inside the 32,768 characters).
   Client side, Save Settings is disabled with the hint "Select at least one
   event" while Selected has an empty list.
 
@@ -281,8 +282,10 @@ whose state actually changes are deployed.
 
 The effective value shown on the tab is derived from the same records:
 Person account when `Order_to_PersonAccount` is active and `Order_to_Contact`
-is not; Event account when `Event_to_Account` is active; None when none of
-those three are active and `Order_to_Contact` is. Any other combination (made
+is not, and neither `Event_to_Account` nor `Order_to_Contact_08` is; Event
+account when `Event_to_Account`, `Order_to_Contact_08` and `Order_to_Contact`
+are active and `Order_to_PersonAccount` is not; None when only
+`Order_to_Contact` of the four is active. Any other combination (made
 on the Mappings tab or in Setup) shows as `Custom` with the notice "These
 mappings were changed on the Mappings tab. Choose an option and save to apply
 it." Saving any option then normalises the four records to the table above.
@@ -304,7 +307,8 @@ it." Saving any option then normalises the four records to the table above.
 
 - Available only when Person Accounts are enabled, detected by
   `Schema.SObjectType.Account.fields.getMap().containsKey('ispersonaccount')`.
-  In other orgs the option is shown disabled with an explanation.
+  In other orgs the Person account option is left out of the radio group
+  (a single radio option cannot be disabled) and its note is shown instead.
 - Record type: the save resolves the person record type to use. The tab lists
   the active Account record types where `IsPersonType = true` that the running
   user can use; with exactly one it is chosen silently, with several the admin
@@ -463,9 +467,16 @@ account option is not rendered.
   ids in README.md, INSTALL.md and PUBLISHING.md.
 - The default records keep shipping through the static resource and the seeder;
   after editing the generators, regenerate the resource before building.
-- New classes or components: `humanitixEventPicker` (LWC only). Any new Apex
-  class would be added to the admin permission set and to `ADMIN_APEX_CLASSES`
-  in the metadata generator in the same commit; this design adds none.
+- New components: the `humanitixEventPicker` LWC and one Apex class,
+  `HumanitixContactAccountService`, which owns the Contact account rules
+  (deriving the current value, building the mapping changes, Person Account
+  detection and record types) so the settings controller stays small. It is
+  added to `ADMIN_APEX_CLASSES` in the metadata generator, and so to the admin
+  permission set, in the same commit.
+- Person Account code never names Person Account fields statically
+  (`PersonEmail`, `IsPersonAccount`, `IsPersonType`, `__pc` fields): the package
+  build org has no Person Accounts, so only dynamic SOQL and describe calls
+  compile there.
 - **Kaipatiki:** install the new version, open the Humanitix Setup tab once
   (seeds `Event_to_Account`, `Order_to_PersonAccount`, their field mappings
   and `Order_to_Contact_08`, all inactive), verify by SOQL. Event Selection stays blank, so behaviour is
