@@ -31,6 +31,18 @@ const SYNC_EVENTS_HELP = {
     'Only the events you pick below are synced. Events you do not pick create nothing in Salesforce, and unpicking an event stops its updates without deleting anything.'
 };
 
+const CONTACT_ACCOUNT_OPTIONS = [
+  { label: 'None (org default)', value: 'None' },
+  { label: 'Event account', value: 'EventAccount' }
+];
+
+const CONTACT_ACCOUNT_HELP = {
+  None: 'Buyers are created as Contacts with no Account set by the connector. In NPSP orgs, NPSP then creates a Household Account for each new Contact automatically. Choose this if you use NPSP households.',
+  EventAccount:
+    'Creates one Account per synced event, named Humanitix - Event Name, and links buyers who do not have an Account yet to it. In NPSP orgs, these Contacts do not get a Household Account.',
+  Custom: 'These mappings were changed on the Mappings tab. Choose an option and save to apply it.'
+};
+
 const DEPLOYING = 'Saving settings. Custom metadata deploys take a few seconds.';
 const SAVED = 'The sync settings have been updated.';
 const STILL_DEPLOYING =
@@ -73,6 +85,7 @@ export default class HumanitixSetupSyncSettings extends LightningElement {
   pageSize;
   enabledResources = [];
   eventSelection = 'All';
+  contactAccount = 'None';
   selectedEventIds = [];
   ticketStatusFilter = '';
   maxRetries;
@@ -117,6 +130,7 @@ export default class HumanitixSetupSyncSettings extends LightningElement {
         ? [...settings.enabledResources]
         : [];
       this.eventSelection = settings.eventSelection || 'All';
+      this.contactAccount = settings.contactAccount || 'None';
       this.selectedEventIds = Array.isArray(settings.selectedEventIds)
         ? [...settings.selectedEventIds]
         : [];
@@ -174,6 +188,18 @@ export default class HumanitixSetupSyncSettings extends LightningElement {
     this.eventSelection = event.detail ? event.detail.value : event.target.value;
   }
 
+  handleContactAccountChange(event) {
+    this.contactAccount = event.detail ? event.detail.value : event.target.value;
+  }
+
+  get contactAccountOptions() {
+    return CONTACT_ACCOUNT_OPTIONS;
+  }
+
+  get contactAccountHelp() {
+    return CONTACT_ACCOUNT_HELP[this.contactAccount] || '';
+  }
+
   handleSelectedEventsChange(event) {
     if (!event.detail || !Array.isArray(event.detail.selectedIds)) {
       return;
@@ -223,6 +249,7 @@ export default class HumanitixSetupSyncSettings extends LightningElement {
       enabledResources: Array.isArray(this.enabledResources) ? [...this.enabledResources] : [],
       eventSelection: this.eventSelection,
       selectedEventIds: [...this.selectedEventIds],
+      contactAccount: this.contactAccount,
       ticketStatusFilter: blankToNull(this.ticketStatusFilter),
       maxRetries: this.maxRetries,
       retryDelayMinutes: this.retryDelayMinutes,

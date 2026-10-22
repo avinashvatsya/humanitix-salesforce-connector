@@ -43,6 +43,7 @@ const SETTINGS = {
   enabledResources: ['Tags', 'Events'],
   eventSelection: 'FutureOnly',
   selectedEventIds: [],
+  contactAccount: 'None',
   ticketStatusFilter: 'complete',
   maxRetries: 5,
   retryDelayMinutes: 5,
@@ -348,5 +349,37 @@ describe('c-humanitix-setup-sync-settings', () => {
     await settle();
 
     expect(picker(element).selectedIds).toEqual(['evt_9']);
+  });
+
+  it('shows the Contact account choice with the help for the selected option', async () => {
+    const element = await createAndLoad();
+    const group = radioGroup(element, 'Contact account');
+
+    expect(group.value).toBe('None');
+    expect(group.options.map((o) => o.value)).toEqual(['None', 'EventAccount']);
+    expect(text(element)).toContain('NPSP then creates a Household Account for each new Contact automatically.');
+    expect(text(element)).toContain('This switches the mappings listed on the Mappings tab.');
+
+    group.value = 'EventAccount';
+    group.dispatchEvent(new CustomEvent('change', { detail: { value: 'EventAccount' } }));
+    await settle();
+
+    expect(text(element)).toContain('Creates one Account per synced event, named Humanitix - Event Name');
+    await save(element);
+    const dto = JSON.parse(saveSyncSettings.mock.calls[0][0].settingsJson);
+    expect(dto.contactAccount).toBe('EventAccount');
+  });
+
+  it('explains a Custom combination and saves it untouched', async () => {
+    getSyncSettings.mockResolvedValue({ ...SETTINGS, contactAccount: 'Custom' });
+
+    const element = await createAndLoad();
+
+    expect(text(element)).toContain(
+      'These mappings were changed on the Mappings tab. Choose an option and save to apply it.'
+    );
+    await save(element);
+    const dto = JSON.parse(saveSyncSettings.mock.calls[0][0].settingsJson);
+    expect(dto.contactAccount).toBe('Custom');
   });
 });
