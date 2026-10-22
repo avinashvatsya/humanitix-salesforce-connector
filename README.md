@@ -20,6 +20,8 @@ Humanitix already offers an official managed connector. This project is a free, 
 | Field mapping | Fixed | **Remappable via Custom Metadata (no code)** |
 | Incremental sync | Full pulls | **Incremental `since` cursors** |
 | Standard objects | Campaign, Contact | **Campaign, Contact, Campaign Member** (+ optional Lead / Account) |
+| Event selection | All or selected events | **All, future only, or selected events (live picker)** |
+| Buyer Account | Optional Account per event | **None (NPSP households), Account per event, or Person Accounts** |
 | Tags | — | **Synced** |
 | Faithful staging objects | Yes | **Yes** (Event, Order, Ticket, Ticket Type, Date, Attributes) |
 | Observability | — | **Sync logs, retries, per-event fault isolation** |
@@ -32,6 +34,7 @@ Humanitix already offers an official managed connector. This project is a free, 
 - Writes a **faithful custom-object layer** (system of record) *and* maps into **standard objects** (Campaign / Contact / Campaign Member) by default.
 - **Repoint any field** to your own object/field from the in-app mapping editor, or by editing Custom Metadata directly. No Apex changes.
 - **Default values** for any target field: fall back to another Humanitix field or a fixed value when the source is blank, so required fields such as `Contact.LastName` and `Lead.Company` still get a value.
+- **Choose what syncs and where buyers land:** sync all events, future events only, or a hand-picked list from a live Humanitix event picker, and link buyers to no Account (NPSP households), one Account per event, or Person Accounts.
 - Runs on a **schedule**, **on demand**, or from a **Flow / Agentforce** action, with full **sync logs**.
 - **Configured in the app:** the *Humanitix Setup* tab is a five-tab console (Dashboard, Connection, Sync Settings, Schedule, Mappings) covering the API key, sync settings, scheduling and mappings. The equivalent Salesforce Setup screens still work.
 

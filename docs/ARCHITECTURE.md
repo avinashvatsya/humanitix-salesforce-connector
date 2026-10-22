@@ -46,7 +46,7 @@ flowchart TD
 ## Sync flow
 
 Phases run in canonical order **Tags → Events → Orders → Tickets** (only the
-enabled ones). Orders/Tickets keyset-iterate non-archived events. Each Queueable
+enabled ones). Orders/Tickets keyset-iterate non-archived events. With Event Selection = Selected, the events listing is fetched in full on every run (it is a few pages) and filtered to the selected ids before mapping, so an event picked later is never hidden behind the events cursor. The Orders/Tickets keyset is limited to the same ids, so unselected events cost no order or ticket callouts. Each Queueable
 execution:
 
 1. Does exactly **one callout** (one page).

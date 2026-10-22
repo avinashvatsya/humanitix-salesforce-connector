@@ -59,7 +59,7 @@ sure that user qualifies.
 
 Open the **Humanitix Setup** tab and select **Sync Settings**. The form edits the
 same `Default` record described below: **Page Size**, **Enabled Resources**,
-**Future events only**, **Ticket Status Filter**, **Max Retries**, **Retry Delay
+**Sync Events**, **Contact account**, **Ticket Status Filter**, **Max Retries**, **Retry Delay
 Minutes**, **Since Mode** and **Named Credential Name**. If your org has no
 settings record yet, the form shows the values the connector is currently using
 and saving creates the record.
@@ -74,6 +74,32 @@ The **Sync Enabled** toggle at the top of the same tab is the kill switch, and i
 is saved on its own, not through that deployment: see
 [Kill switch](#4-kill-switch).
 
+### Choosing which events sync
+
+**Sync Events** on the Sync Settings tab has three options:
+
+- **All events:** every event in your Humanitix account is synced.
+- **Future events only:** only events that have not ended yet are synced.
+- **Selected events:** only the events you pick are synced. Choosing it shows
+  an event picker that loads your events live from Humanitix. Search by name,
+  tick the events you want, and click **Save Settings**. Picked events show as
+  pills above the list; click a pill's cross to remove it.
+
+Things to know about **Selected events**:
+
+- Events you do not pick create nothing in Salesforce: no Campaign, no
+  Humanitix Event record, no Contacts.
+- Unpicking an event stops its updates. Nothing is deleted, and picking it
+  again resumes them.
+- An event you pick later is synced on the next run, including its existing orders and tickets.
+- A picked event that no longer exists in Humanitix shows as
+  `Unknown event (<id>)` and can be removed.
+- Up to 1,000 events can be picked. The picker lists up to 5,000 events.
+- A run will not start while Selected events has nothing picked.
+
+Orgs upgraded from 1.2 keep their previous behaviour until they choose an
+option: an empty Event Selection follows the older **In Future Only** setting.
+
 ### From Setup (fallback and advanced)
 
 The record can always be edited directly, and this is the only way to change the
@@ -85,7 +111,9 @@ Default**:
 | --- | --- | --- |
 | Page Size | 100 | Records per API page |
 | Enabled Resources | `Events,Orders,Tickets,Tags` | Which resources to sync (comma-separated) |
-| In Future Only | false | Only sync events ending in the future |
+| Event Selection | All | `All`, `FutureOnly` or `Selected`. Blank follows In Future Only |
+| Selected Event Ids | *(blank)* | Comma-separated Humanitix event ids used when Event Selection is `Selected` |
+| In Future Only | false | Superseded by Event Selection; still honoured when Event Selection is blank |
 | Ticket Status Filter | *(blank)* | e.g. `complete` to skip cancelled tickets |
 | Max Retries | 5 | Retries on 429/5xx before a page is marked failed |
 | Retry Delay Minutes | 5 | Base backoff (whole minutes) |
@@ -186,6 +214,44 @@ has are never overwritten. To let Humanitix data overwrite Salesforce
 always create new Contacts and let your own duplicate rules handle merging
 (`AlwaysCreate`), edit the `Humanitix Object Mapping > Order_to_Contact` Custom
 Metadata record — see [FIELD-MAPPING.md](FIELD-MAPPING.md#update-modes).
+
+### Choosing the Contact account
+
+**Contact account** on the Sync Settings tab decides which Account each buyer
+is linked to:
+
+| Option | What happens |
+| --- | --- |
+| **None (org default)** | Buyers are created as Contacts with no Account set by the connector. In NPSP orgs, NPSP then creates a Household Account for each new Contact automatically. Choose this if you use NPSP households. |
+| **Event account** | One Account per synced event, named `Humanitix - Event Name`. Buyers who do not have an Account yet are linked to it. In NPSP orgs, these Contacts do not get a Household Account. |
+| **Person account** | Each buyer is created as a Person Account instead of a Contact, matched by email. Shown only when Person Accounts are enabled in the org. |
+
+How it works: the option switches mapping records on or off, and saving it
+is part of the same save as the rest of the Sync Settings tab.
+
+| Mapping | None | Event account | Person account |
+| --- | --- | --- | --- |
+| Order to Contact | on | on | off |
+| Order to Contact, AccountId field (`Order_to_Contact_08`) | off | on | off |
+| Event to Account | off | on | off |
+| Order to Person Account | off | off | on |
+
+If those mappings are changed by hand on the Mappings tab, the option shows as
+**Custom** until you choose and save one again.
+
+Notes:
+
+- **Event account and existing Contacts.** The shipped Order to Contact mapping
+  only fills blank fields, so a Contact that already has an Account keeps it.
+- **Event account naming.** To change the `Humanitix - ` prefix, edit the
+  Transform Arg of the `Event_to_Account` name mapping on the Mappings tab.
+- **Person account record type.** With one person record type it is used
+  automatically; with several, the tab asks which one to use.
+- **Person account and existing Contacts.** Existing Contacts are not
+  converted. A buyer who already exists as a business Contact gets a new
+  Person Account, because the match runs on the Person Account email.
+- **Person Accounts are permanent.** Salesforce Support enables them on
+  request, and that change cannot be undone, so decide before enabling them.
 
 ## Known limitations
 
