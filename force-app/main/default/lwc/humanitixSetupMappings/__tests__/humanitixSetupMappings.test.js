@@ -462,4 +462,18 @@ describe('c-humanitix-setup-mappings', () => {
     expect(payload.fieldMappings[0].defaultSourcePath).toBe('_id');
     expect(payload.fieldMappings[0].defaultValue).toBe('Unknown');
   });
+
+  it('banners only the newly shipped mappings when the org already has records', async () => {
+    getObjectMappings.mockResolvedValue([
+      { ...OBJECT_MAPPINGS[0], fromDefaults: true },
+      { ...OBJECT_MAPPINGS[1], fromDefaults: false }
+    ]);
+
+    const element = await createAndLoad();
+
+    expect(text(element)).toContain(
+      'Some mappings that ship with this version are not in this org yet.'
+    );
+    expect(text(element)).not.toContain('These are the shipped default mappings.');
+  });
 });

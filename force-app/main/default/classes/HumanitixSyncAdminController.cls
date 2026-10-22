@@ -14,15 +14,18 @@ public with sharing class HumanitixSyncAdminController {
 
     /**
      * Called every time the admin panel loads. Unlocked packages don't support
-     * post-install scripts, so first-run seeding happens here instead: if the
-     * org has no mapping records yet (fresh install), enqueue the seeder that
-     * deploys the shipped defaults. Returns true when seeding was started so
-     * the UI can tell the admin the defaults are being installed.
+     * post-install scripts, so seeding happens here instead: whenever a shipped
+     * default mapping record is missing from the org (a fresh install, or an
+     * upgrade that ships new defaults), enqueue the seeder that deploys the
+     * missing records. Returns true when seeding is needed so the UI can tell
+     * the admin the defaults are being installed.
      */
     @AuraEnabled
     public static Boolean ensureDefaultMappings() {
         try {
-            if ([SELECT COUNT() FROM Humanitix_Object_Mapping__mdt] > 0) {
+            // Fresh installs AND upgrades that ship new defaults both land here;
+            // the seeder deploys only missing records, so edits are never touched.
+            if (HumanitixMappingSeeder.missingDefaults().isEmpty()) {
                 return false;
             }
             Integer inFlight = [

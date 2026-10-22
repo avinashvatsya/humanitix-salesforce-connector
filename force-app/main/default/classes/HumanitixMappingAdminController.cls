@@ -4,10 +4,11 @@
  * (CMT records cannot be deleted from Apex; deleted shipped records would be
  * re-seeded on upgrade anyway).
  *
- * Reads fall back to the shipped defaults (fromDefaults=true) while the org
- * has no Humanitix_Object_Mapping__mdt records. The first save on such an org
- * materializes ALL defaults plus the edits in one atomic deployment, because
- * the moment any org record exists org records are fully authoritative.
+ * Reads are the org's records plus every shipped default the org does not
+ * have yet (flagged fromDefaults=true): on a fresh install that is all of
+ * them, after an upgrade only the newly shipped ones. Every save deploys the
+ * missing defaults alongside the edits, so a save never leaves the org with
+ * a partial set.
  *
  * Validation reuses HumanitixMappingConfig.fromRecords().validate(): pending
  * edits are overlaid onto the effective records in memory and the candidate
@@ -73,41 +74,24 @@ public with sharing class HumanitixMappingAdminController {
     @AuraEnabled
     public static List<ObjectMappingDto> getObjectMappings() {
         try {
-            Boolean fromDefaults = !orgHasMappingRecords();
             Map<String, Integer> fieldCounts = new Map<String, Integer>();
-            List<ObjectMappingDto> out = new List<ObjectMappingDto>();
-            if (fromDefaults) {
-                for (HumanitixDefaultMappings.DefaultRecord r : HumanitixDefaultMappings.records()) {
-                    if (r.typeName == FIELD_TYPE) {
-                        String parent = (String) r.values.get('Object_Mapping__c');
-                        fieldCounts.put(parent, (fieldCounts.containsKey(parent) ? fieldCounts.get(parent) : 0) + 1);
-                    }
-                }
-                for (HumanitixDefaultMappings.DefaultRecord r : HumanitixDefaultMappings.records()) {
-                    if (r.typeName == OBJECT_TYPE) {
-                        out.add(objectDtoFromDefault(r, fieldCounts));
-                    }
-                }
-            } else {
-                // No GROUP BY on custom metadata SOQL; 159 rows is nothing to count in Apex.
-                for (Humanitix_Field_Mapping__mdt fm : [
-                    SELECT Object_Mapping__c
-                    FROM Humanitix_Field_Mapping__mdt
-                ]) {
-                    String parent = fm.Object_Mapping__c;
-                    fieldCounts.put(parent, (fieldCounts.containsKey(parent) ? fieldCounts.get(parent) : 0) + 1);
-                }
-                for (Humanitix_Object_Mapping__mdt om : [
-                    SELECT DeveloperName, MasterLabel, Source_Resource__c, Source_Collection_Path__c,
-                        Target_SObject__c, External_Id_Field__c, Match_Strategy__c, Match_Field_Set__c,
-                        Update_Mode__c, Load_Order__c, Is_Active__c
-                    FROM Humanitix_Object_Mapping__mdt
-                    ORDER BY Load_Order__c, DeveloperName
-                ]) {
-                    out.add(objectDtoFromRecord(om, fieldCounts));
-                }
+            for (Humanitix_Field_Mapping__mdt fm : effectiveFieldRecordsByName().values()) {
+                String parent = fm.Object_Mapping__c;
+                fieldCounts.put(parent, (fieldCounts.containsKey(parent) ? fieldCounts.get(parent) : 0) + 1);
             }
-            return out;
+            List<ObjectMappingDto> out = new List<ObjectMappingDto>();
+            for (Humanitix_Object_Mapping__mdt om : [
+                SELECT DeveloperName, MasterLabel, Source_Resource__c, Source_Collection_Path__c,
+                    Target_SObject__c, External_Id_Field__c, Match_Strategy__c, Match_Field_Set__c,
+                    Update_Mode__c, Load_Order__c, Is_Active__c
+                FROM Humanitix_Object_Mapping__mdt
+            ]) {
+                out.add(objectDtoFromRecord(om, fieldCounts));
+            }
+            for (HumanitixDefaultMappings.DefaultRecord r : missingDefaults(OBJECT_TYPE)) {
+                out.add(objectDtoFromDefault(r, fieldCounts));
+            }
+            return sortedByLoadOrder(out);
         } catch (Exception e) {
             throw new AuraHandledException(e.getMessage());
         }
@@ -116,24 +100,20 @@ public with sharing class HumanitixMappingAdminController {
     @AuraEnabled
     public static List<FieldMappingDto> getFieldMappings(String objectMappingDevName) {
         try {
-            Boolean fromDefaults = !orgHasMappingRecords();
             List<FieldMappingDto> out = new List<FieldMappingDto>();
-            if (fromDefaults) {
-                for (HumanitixDefaultMappings.DefaultRecord r : HumanitixDefaultMappings.records()) {
-                    if (r.typeName == FIELD_TYPE && objectMappingDevName == (String) r.values.get('Object_Mapping__c')) {
-                        out.add(fieldDtoFromDefault(r));
-                    }
-                }
-            } else {
-                for (Humanitix_Field_Mapping__mdt fm : [
-                    SELECT DeveloperName, MasterLabel, Object_Mapping__c, Source_Path__c, Target_Field__c,
-                        Data_Type__c, Transform__c, Transform_Arg__c, Default_Source_Path__c, Default_Value__c,
-                        Is_External_Id__c, Overwrite_Blank__c, Is_Active__c
-                    FROM Humanitix_Field_Mapping__mdt
-                    WHERE Object_Mapping__c = :objectMappingDevName
-                    ORDER BY DeveloperName
-                ]) {
-                    out.add(fieldDtoFromRecord(fm));
+            for (Humanitix_Field_Mapping__mdt fm : [
+                SELECT DeveloperName, MasterLabel, Object_Mapping__c, Source_Path__c, Target_Field__c,
+                    Data_Type__c, Transform__c, Transform_Arg__c, Default_Source_Path__c, Default_Value__c,
+                    Is_External_Id__c, Overwrite_Blank__c, Is_Active__c
+                FROM Humanitix_Field_Mapping__mdt
+                WHERE Object_Mapping__c = :objectMappingDevName
+                ORDER BY DeveloperName
+            ]) {
+                out.add(fieldDtoFromRecord(fm));
+            }
+            for (HumanitixDefaultMappings.DefaultRecord r : missingDefaults(FIELD_TYPE)) {
+                if (objectMappingDevName == (String) r.values.get('Object_Mapping__c')) {
+                    out.add(fieldDtoFromDefault(r));
                 }
             }
             return out;
@@ -194,20 +174,71 @@ public with sharing class HumanitixMappingAdminController {
     public static String savePending(String pendingJson) {
         try {
             PendingChanges pending = parsePending(pendingJson);
-            List<String> problems = structuralProblems(pending);
-            if (problems.isEmpty()) {
-                assignNewDevNames(pending);
-                problems = candidateConfig(pending).validate();
-            }
-            if (!problems.isEmpty()) {
-                throw new AuraHandledException('Fix these problems before saving: ' + String.join(problems, ' '));
-            }
-            return HumanitixMetadataWriter.deploy(deployRecords(pending), 'Mappings');
+            return HumanitixMetadataWriter.deploy(deployRecordsFor(pending), 'Mappings');
         } catch (AuraHandledException e) {
             throw e;
+        } catch (HumanitixMappingException e) {
+            throw new AuraHandledException('Fix these problems before saving: ' + e.getMessage());
         } catch (Exception e) {
             throw new AuraHandledException('The mapping deployment could not be started: ' + e.getMessage());
         }
+    }
+
+    /**
+     * Shared by savePending and the Sync Settings Contact account save:
+     * structural checks, new DeveloperNames, a full candidate-config validate,
+     * then the records to deploy (always including missing shipped defaults).
+     */
+    public static List<Metadata.CustomMetadata> deployRecordsFor(PendingChanges pending) {
+        List<String> problems = structuralProblems(pending);
+        if (problems.isEmpty()) {
+            assignNewDevNames(pending);
+            problems = candidateConfig(pending).validate();
+        }
+        if (!problems.isEmpty()) {
+            throw new HumanitixMappingException(String.join(problems, ' '));
+        }
+        return deployRecords(pending);
+    }
+
+    /** The org record, else the missing shipped default, else null. */
+    public static ObjectMappingDto effectiveObjectMapping(String devName) {
+        for (Humanitix_Object_Mapping__mdt om : [
+            SELECT DeveloperName, MasterLabel, Source_Resource__c, Source_Collection_Path__c,
+                Target_SObject__c, External_Id_Field__c, Match_Strategy__c, Match_Field_Set__c,
+                Update_Mode__c, Load_Order__c, Is_Active__c
+            FROM Humanitix_Object_Mapping__mdt
+            WHERE DeveloperName = :devName
+            LIMIT 1
+        ]) {
+            return objectDtoFromRecord(om, new Map<String, Integer>());
+        }
+        for (HumanitixDefaultMappings.DefaultRecord r : HumanitixDefaultMappings.records()) {
+            if (r.typeName == OBJECT_TYPE && r.developerName == devName) {
+                return objectDtoFromDefault(r, new Map<String, Integer>());
+            }
+        }
+        return null;
+    }
+
+    /** The org record, else the missing shipped default, else null. */
+    public static FieldMappingDto effectiveFieldMapping(String devName) {
+        for (Humanitix_Field_Mapping__mdt fm : [
+            SELECT DeveloperName, MasterLabel, Object_Mapping__c, Source_Path__c, Target_Field__c,
+                Data_Type__c, Transform__c, Transform_Arg__c, Default_Source_Path__c, Default_Value__c,
+                Is_External_Id__c, Overwrite_Blank__c, Is_Active__c
+            FROM Humanitix_Field_Mapping__mdt
+            WHERE DeveloperName = :devName
+            LIMIT 1
+        ]) {
+            return fieldDtoFromRecord(fm);
+        }
+        for (HumanitixDefaultMappings.DefaultRecord r : HumanitixDefaultMappings.records()) {
+            if (r.typeName == FIELD_TYPE && r.developerName == devName) {
+                return fieldDtoFromDefault(r);
+            }
+        }
+        return null;
     }
 
     @AuraEnabled
@@ -324,17 +355,15 @@ public with sharing class HumanitixMappingAdminController {
     }
 
     /**
-     * The records to deploy. On an unseeded org this is EVERY default (with
-     * pending edits overlaid) plus the creates, so the first save materializes
-     * the whole configuration atomically; afterwards only touched records ship.
+     * The records to deploy: every shipped default the org is missing (all of
+     * them on a fresh install) with pending edits overlaid, plus the edits and
+     * creates.
      */
     @TestVisible
     private static List<Metadata.CustomMetadata> deployRecords(PendingChanges pending) {
         Map<String, Metadata.CustomMetadata> byFullName = new Map<String, Metadata.CustomMetadata>();
-        if (!orgHasMappingRecords()) {
-            for (HumanitixDefaultMappings.DefaultRecord r : HumanitixMappingSeeder.missingDefaults()) {
-                byFullName.put(r.fullName(), HumanitixMetadataWriter.record(r.fullName(), r.label, r.values));
-            }
+        for (HumanitixDefaultMappings.DefaultRecord r : HumanitixMappingSeeder.missingDefaults()) {
+            byFullName.put(r.fullName(), HumanitixMetadataWriter.record(r.fullName(), r.label, r.values));
         }
         for (ObjectMappingDto om : pending.objectMappings) {
             String fullName = OBJECT_TYPE + '.' + om.devName;
@@ -357,23 +386,33 @@ public with sharing class HumanitixMappingAdminController {
 
     // ---- effective records -------------------------------------------------
 
-    private static Boolean orgHasMappingRecords() {
-        return [SELECT COUNT() FROM Humanitix_Object_Mapping__mdt] > 0;
+    /** Shipped default records of one type that the org does not have yet. */
+    private static List<HumanitixDefaultMappings.DefaultRecord> missingDefaults(String typeName) {
+        List<HumanitixDefaultMappings.DefaultRecord> out = new List<HumanitixDefaultMappings.DefaultRecord>();
+        for (HumanitixDefaultMappings.DefaultRecord r : HumanitixMappingSeeder.missingDefaults()) {
+            if (r.typeName == typeName) {
+                out.add(r);
+            }
+        }
+        return out;
     }
 
     private static Map<String, Humanitix_Object_Mapping__mdt> effectiveObjectRecordsByName() {
         Map<String, Humanitix_Object_Mapping__mdt> out = new Map<String, Humanitix_Object_Mapping__mdt>();
-        if (orgHasMappingRecords()) {
-            for (Humanitix_Object_Mapping__mdt om : [
-                SELECT DeveloperName, Source_Resource__c, Source_Collection_Path__c, Target_SObject__c,
-                    External_Id_Field__c, Match_Strategy__c, Match_Field_Set__c,
-                    Update_Mode__c, Load_Order__c, Is_Active__c
-                FROM Humanitix_Object_Mapping__mdt
-            ]) {
-                out.put(om.DeveloperName, om);
-            }
-        } else {
-            for (Humanitix_Object_Mapping__mdt om : HumanitixDefaultMappings.objectMappings()) {
+        for (Humanitix_Object_Mapping__mdt om : [
+            SELECT DeveloperName, Source_Resource__c, Source_Collection_Path__c, Target_SObject__c,
+                External_Id_Field__c, Match_Strategy__c, Match_Field_Set__c,
+                Update_Mode__c, Load_Order__c, Is_Active__c
+            FROM Humanitix_Object_Mapping__mdt
+        ]) {
+            out.put(om.DeveloperName, om);
+        }
+        Set<String> missing = new Set<String>();
+        for (HumanitixDefaultMappings.DefaultRecord r : missingDefaults(OBJECT_TYPE)) {
+            missing.add(r.developerName);
+        }
+        for (Humanitix_Object_Mapping__mdt om : HumanitixDefaultMappings.objectMappings()) {
+            if (missing.contains(om.DeveloperName)) {
                 out.put(om.DeveloperName, om);
             }
         }
@@ -382,22 +421,32 @@ public with sharing class HumanitixMappingAdminController {
 
     private static Map<String, Humanitix_Field_Mapping__mdt> effectiveFieldRecordsByName() {
         Map<String, Humanitix_Field_Mapping__mdt> out = new Map<String, Humanitix_Field_Mapping__mdt>();
-        if (orgHasMappingRecords()) {
-            for (Humanitix_Field_Mapping__mdt fm : [
-                SELECT DeveloperName, Object_Mapping__c, Source_Path__c, Target_Field__c, Data_Type__c,
-                    Transform__c, Transform_Arg__c, Default_Source_Path__c, Default_Value__c,
-                    Is_External_Id__c, Overwrite_Blank__c, Is_Active__c
-                FROM Humanitix_Field_Mapping__mdt
-            ]) {
-                out.put(fm.DeveloperName, fm);
-            }
-        } else {
-            for (HumanitixDefaultMappings.DefaultRecord r : HumanitixDefaultMappings.records()) {
-                if (r.typeName == FIELD_TYPE) {
-                    Humanitix_Field_Mapping__mdt fm = (Humanitix_Field_Mapping__mdt) toFieldRecord(fieldDtoFromDefault(r));
-                    out.put(r.developerName, fm);
-                }
-            }
+        for (Humanitix_Field_Mapping__mdt fm : [
+            SELECT DeveloperName, Object_Mapping__c, Source_Path__c, Target_Field__c, Data_Type__c,
+                Transform__c, Transform_Arg__c, Default_Source_Path__c, Default_Value__c,
+                Is_External_Id__c, Overwrite_Blank__c, Is_Active__c
+            FROM Humanitix_Field_Mapping__mdt
+        ]) {
+            out.put(fm.DeveloperName, fm);
+        }
+        for (HumanitixDefaultMappings.DefaultRecord r : missingDefaults(FIELD_TYPE)) {
+            out.put(r.developerName, toFieldRecord(fieldDtoFromDefault(r)));
+        }
+        return out;
+    }
+
+    /** Load Order, then DeveloperName: org records and missing defaults interleave correctly. */
+    private static List<ObjectMappingDto> sortedByLoadOrder(List<ObjectMappingDto> dtos) {
+        Map<String, ObjectMappingDto> byKey = new Map<String, ObjectMappingDto>();
+        for (ObjectMappingDto d : dtos) {
+            Decimal order = d.loadOrder == null ? 100 : d.loadOrder;
+            byKey.put(String.valueOf(order.setScale(2)).leftPad(12, '0') + '|' + d.devName, d);
+        }
+        List<String> keys = new List<String>(byKey.keySet());
+        keys.sort();
+        List<ObjectMappingDto> out = new List<ObjectMappingDto>();
+        for (String k : keys) {
+            out.add(byKey.get(k));
         }
         return out;
     }
