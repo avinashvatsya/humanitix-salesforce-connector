@@ -18,6 +18,19 @@ const SINCE_MODE_OPTIONS = [
   { label: 'FullPull (fetch everything each run)', value: 'FullPull' }
 ];
 
+const SYNC_EVENTS_OPTIONS = [
+  { label: 'All events', value: 'All' },
+  { label: 'Future events only', value: 'FutureOnly' },
+  { label: 'Selected events', value: 'Selected' }
+];
+
+const SYNC_EVENTS_HELP = {
+  All: 'Every event in your Humanitix account is synced.',
+  FutureOnly: 'Only events that have not ended yet are synced.',
+  Selected:
+    'Only the events you pick below are synced. Events you do not pick create nothing in Salesforce, and unpicking an event stops its updates without deleting anything.'
+};
+
 const DEPLOYING = 'Saving settings. Custom metadata deploys take a few seconds.';
 const SAVED = 'The sync settings have been updated.';
 const STILL_DEPLOYING =
@@ -47,6 +60,7 @@ function blankToNull(value) {
 export default class HumanitixSetupSyncSettings extends LightningElement {
   resourceOptions = RESOURCE_OPTIONS;
   sinceModeOptions = SINCE_MODE_OPTIONS;
+  syncEventsOptions = SYNC_EVENTS_OPTIONS;
   pollOptions = { intervalMs: 2000, timeoutMs: 120000 };
 
   isLoading = true;
@@ -58,7 +72,8 @@ export default class HumanitixSetupSyncSettings extends LightningElement {
 
   pageSize;
   enabledResources = [];
-  inFutureOnly = false;
+  eventSelection = 'All';
+  selectedEventIds = [];
   ticketStatusFilter = '';
   maxRetries;
   retryDelayMinutes;
@@ -101,7 +116,10 @@ export default class HumanitixSetupSyncSettings extends LightningElement {
       this.enabledResources = Array.isArray(settings.enabledResources)
         ? [...settings.enabledResources]
         : [];
-      this.inFutureOnly = settings.inFutureOnly === true;
+      this.eventSelection = settings.eventSelection || 'All';
+      this.selectedEventIds = Array.isArray(settings.selectedEventIds)
+        ? [...settings.selectedEventIds]
+        : [];
       this.ticketStatusFilter = settings.ticketStatusFilter || '';
       this.maxRetries = settings.maxRetries;
       this.retryDelayMinutes = settings.retryDelayMinutes;
@@ -152,8 +170,31 @@ export default class HumanitixSetupSyncSettings extends LightningElement {
     this.enabledResources = Array.isArray(value) ? value : [];
   }
 
-  handleInFutureOnlyChange(event) {
-    this.inFutureOnly = event.target.checked === true;
+  handleSyncEventsChange(event) {
+    this.eventSelection = event.detail ? event.detail.value : event.target.value;
+  }
+
+  handleSelectedEventsChange(event) {
+    if (!event.detail || !Array.isArray(event.detail.selectedIds)) {
+      return;
+    }
+    this.selectedEventIds = [...event.detail.selectedIds];
+  }
+
+  get syncEventsHelp() {
+    return SYNC_EVENTS_HELP[this.eventSelection] || '';
+  }
+
+  get showEventPicker() {
+    return this.eventSelection === 'Selected';
+  }
+
+  get selectionMissing() {
+    return this.eventSelection === 'Selected' && this.selectedEventIds.length === 0;
+  }
+
+  get saveDisabled() {
+    return this.isSaving || this.selectionMissing;
   }
 
   handleTicketStatusFilterChange(event) {
@@ -180,7 +221,8 @@ export default class HumanitixSetupSyncSettings extends LightningElement {
     return {
       pageSize: this.pageSize,
       enabledResources: Array.isArray(this.enabledResources) ? [...this.enabledResources] : [],
-      inFutureOnly: this.inFutureOnly === true,
+      eventSelection: this.eventSelection,
+      selectedEventIds: [...this.selectedEventIds],
       ticketStatusFilter: blankToNull(this.ticketStatusFilter),
       maxRetries: this.maxRetries,
       retryDelayMinutes: this.retryDelayMinutes,
