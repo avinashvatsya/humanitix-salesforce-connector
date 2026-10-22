@@ -4,7 +4,8 @@ private class HumanitixSyncSettingsControllerTest {
         HumanitixSyncSettingsController.SettingsDto dto = new HumanitixSyncSettingsController.SettingsDto();
         dto.pageSize = 50;
         dto.enabledResources = new List<String>{ 'Events', 'Orders' };
-        dto.inFutureOnly = true;
+        dto.eventSelection = 'All';
+        dto.selectedEventIds = new List<String>();
         dto.ticketStatusFilter = null;
         dto.maxRetries = 3;
         dto.retryDelayMinutes = 10;
@@ -28,7 +29,8 @@ private class HumanitixSyncSettingsControllerTest {
 
         System.assertEquals(42, dto.pageSize);
         System.assertEquals(new List<String>{ 'Tags', 'Events' }, dto.enabledResources, 'Canonical order expected');
-        System.assertEquals(true, dto.inFutureOnly);
+        System.assertEquals('FutureOnly', dto.eventSelection, 'Legacy checkbox resolves to FutureOnly');
+        System.assertEquals(new List<String>(), dto.selectedEventIds);
         System.assertEquals(2, dto.maxRetries);
         System.assertEquals(7, dto.retryDelayMinutes);
         System.assertEquals('FullPull', dto.sinceMode);
@@ -56,7 +58,11 @@ private class HumanitixSyncSettingsControllerTest {
         for (Metadata.CustomMetadataValue v : cmt.values) {
             byField.put(v.field, v.value);
         }
-        System.assertEquals(8, byField.size(), 'All live settings fields must be sent, nulls included');
+        System.assertEquals(10, byField.size(), 'All live settings fields must be sent, nulls included');
+        System.assertEquals('All', byField.get('Event_Selection__c'));
+        System.assert(byField.containsKey('Selected_Event_Ids__c'));
+        System.assertEquals(null, byField.get('Selected_Event_Ids__c'), 'An empty selection deploys an explicit null');
+        System.assertEquals(false, byField.get('In_Future_Only__c'));
         System.assertEquals('Events,Orders', byField.get('Enabled_Resources__c'));
         System.assertEquals(50, byField.get('Page_Size__c'));
         System.assert(byField.containsKey('Ticket_Status_Filter__c'), 'Cleared field must still deploy');
@@ -118,5 +124,133 @@ private class HumanitixSyncSettingsControllerTest {
         Humanitix_Sync_Toggle__c toggle = Humanitix_Sync_Toggle__c.getOrgDefaults();
         System.assertNotEquals(null, toggle.Id, 'Org default row must exist after toggling');
         System.assertEquals(true, toggle.Sync_Enabled__c);
+    }
+
+    private static Map<String, Object> deployedSettingValues() {
+        for (Metadata.Metadata md : HumanitixMetadataWriter.lastContainer.getMetadata()) {
+            Metadata.CustomMetadata cmt = (Metadata.CustomMetadata) md;
+            if (cmt.fullName == 'Humanitix_Sync_Setting.Default') {
+                Map<String, Object> byField = new Map<String, Object>();
+                for (Metadata.CustomMetadataValue v : cmt.values) {
+                    byField.put(v.field, v.value);
+                }
+                return byField;
+            }
+        }
+        return null;
+    }
+
+    @IsTest
+    static void saveWritesSelectedIdsAndKeepsTheLegacyCheckboxTruthful() {
+        HumanitixSyncSettingsController.SettingsDto dto = validDto();
+        dto.eventSelection = 'Selected';
+        dto.selectedEventIds = new List<String>{ ' evt_1', 'evt_2', 'evt_1' };
+
+        Test.startTest();
+        HumanitixSyncSettingsController.saveSyncSettings(JSON.serialize(dto));
+        Test.stopTest();
+
+        Map<String, Object> byField = deployedSettingValues();
+        System.assertEquals('Selected', byField.get('Event_Selection__c'));
+        System.assertEquals('evt_1,evt_2', byField.get('Selected_Event_Ids__c'), 'Trimmed and de-duplicated');
+        System.assertEquals(false, byField.get('In_Future_Only__c'));
+    }
+
+    @IsTest
+    static void saveOfFutureOnlySetsTheLegacyCheckbox() {
+        HumanitixSyncSettingsController.SettingsDto dto = validDto();
+        dto.eventSelection = 'FutureOnly';
+
+        Test.startTest();
+        HumanitixSyncSettingsController.saveSyncSettings(JSON.serialize(dto));
+        Test.stopTest();
+
+        System.assertEquals(true, deployedSettingValues().get('In_Future_Only__c'));
+    }
+
+    @IsTest
+    static void validateEventSelectionRules() {
+        HumanitixSyncSettingsController.SettingsDto dto = validDto();
+        dto.eventSelection = 'Some';
+        System.assertEquals(1, HumanitixSyncSettingsController.validate(dto).size(), 'unknown mode');
+
+        dto.eventSelection = 'Selected';
+        dto.selectedEventIds = new List<String>{ '  ' };
+        List<String> problems = HumanitixSyncSettingsController.validate(dto);
+        System.assertEquals(1, problems.size(), String.join(problems, ' | '));
+        System.assert(problems[0].startsWith('Select at least one event'), problems[0]);
+
+        dto.selectedEventIds = new List<String>{ 'evt_1', 'bad id; drop' };
+        problems = HumanitixSyncSettingsController.validate(dto);
+        System.assertEquals(1, problems.size(), String.join(problems, ' | '));
+        System.assert(problems[0].contains('is not a valid Humanitix event id'), problems[0]);
+
+        List<String> tooMany = new List<String>();
+        for (Integer i = 0; i <= HumanitixSyncSettingsController.MAX_SELECTED_EVENTS; i++) {
+            tooMany.add('evt_' + i);
+        }
+        dto.selectedEventIds = tooMany;
+        problems = HumanitixSyncSettingsController.validate(dto);
+        System.assertEquals(1, problems.size(), String.join(problems, ' | '));
+        System.assert(problems[0].startsWith('Select at most 1000 events'), problems[0]);
+
+        dto.eventSelection = 'All';
+        dto.selectedEventIds = new List<String>();
+        System.assertEquals(0, HumanitixSyncSettingsController.validate(dto).size(), 'All needs no ids');
+    }
+
+    @IsTest
+    static void fetchHumanitixEventsMapsAPage() {
+        HumanitixCalloutMock mock = new HumanitixCalloutMock().enqueue(
+            200,
+            HumanitixTestDataFactory.pageBody('events', HumanitixTestDataFactory.eventJson(), 150, 1, 100)
+        );
+        Test.setMock(HttpCalloutMock.class, mock);
+
+        Test.startTest();
+        HumanitixSyncSettingsController.EventPageDto result = HumanitixSyncSettingsController.fetchHumanitixEvents(1);
+        Test.stopTest();
+
+        System.assertEquals(1, result.page);
+        System.assertEquals(true, result.hasNextPage, '1 x 100 < 150');
+        System.assertEquals(1, result.events.size());
+        HumanitixSyncSettingsController.EventSummary e = result.events[0];
+        System.assertEquals(HumanitixTestDataFactory.EVENT_ID, e.id);
+        System.assertEquals('Hobbit Dance Off', e.name);
+        System.assertEquals('2026-03-01T13:30:00.000Z', e.startDate);
+        System.assertEquals('2026-03-01T16:00:00.000Z', e.endDate);
+        System.assertEquals('Australia/Sydney', e.timezone);
+        System.assertEquals(false, e.isArchived);
+        System.assertEquals(true, e.published);
+        System.assert(mock.requestedEndpoints[0].contains('/v1/events?'), mock.requestedEndpoints[0]);
+        System.assert(mock.requestedEndpoints[0].contains('page=1'), mock.requestedEndpoints[0]);
+        System.assert(mock.requestedEndpoints[0].contains('pageSize=100'), mock.requestedEndpoints[0]);
+    }
+
+    @IsTest
+    static void fetchHumanitixEventsReportsTheLastPage() {
+        Test.setMock(
+            HttpCalloutMock.class,
+            new HumanitixCalloutMock().enqueue(200, HumanitixTestDataFactory.pageBody('events', HumanitixTestDataFactory.eventJson(), 101, 2, 100))
+        );
+        Test.startTest();
+        HumanitixSyncSettingsController.EventPageDto result = HumanitixSyncSettingsController.fetchHumanitixEvents(2);
+        Test.stopTest();
+        System.assertEquals(2, result.page);
+        System.assertEquals(false, result.hasNextPage, '2 x 100 >= 101');
+    }
+
+    @IsTest
+    static void fetchHumanitixEventsExplainsAnAuthFailure() {
+        Test.setMock(HttpCalloutMock.class, new HumanitixCalloutMock().enqueue(401, '{"message":"Unauthorized"}'));
+        String message;
+        Test.startTest();
+        try {
+            HumanitixSyncSettingsController.fetchHumanitixEvents(null);
+        } catch (AuraHandledException e) {
+            message = e.getMessage();
+        }
+        Test.stopTest();
+        System.assertEquals('Humanitix returned HTTP 401. Check the API key on the Connection tab.', message);
     }
 }
