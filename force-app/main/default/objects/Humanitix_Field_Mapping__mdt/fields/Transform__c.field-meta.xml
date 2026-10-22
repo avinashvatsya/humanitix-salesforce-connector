@@ -67,6 +67,11 @@
                 <default>false</default>
                 <label>ToJson</label>
             </value>
+            <value>
+                <fullName>Template</fullName>
+                <default>false</default>
+                <label>Template</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>

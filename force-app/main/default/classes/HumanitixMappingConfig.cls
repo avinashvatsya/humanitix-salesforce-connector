@@ -258,6 +258,9 @@ public with sharing class HumanitixMappingConfig {
                 if (f.dataType == 'Reference' && String.isNotBlank(f.transformArg)) {
                     validateReference(gd, f.transformArg, m.devName, errors);
                 }
+                if (f.transform == 'Template' && (String.isBlank(f.transformArg) || !f.transformArg.contains('{value}'))) {
+                    errors.add('Field Mapping on "' + m.devName + '": Template needs a Transform Arg containing {value}, for example Humanitix - {value}.');
+                }
                 validateConstantValue(f, m.devName, errors);
             }
             if (usesExtId && String.isNotBlank(m.externalIdField) && !populatesExtId) {

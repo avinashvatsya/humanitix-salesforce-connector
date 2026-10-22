@@ -411,4 +411,35 @@ private class HumanitixMappingEngineTest {
         cap.transformArg = '250';
         System.assertEquals(0, cfg.validate().size(), 'a coercible literal validates cleanly');
     }
+
+    @IsTest
+    static void validateRejectsATemplateWithoutTheValueToken() {
+        HumanitixMappingConfig cfg = HumanitixMappingConfig.fromRecords(
+            new List<Humanitix_Object_Mapping__mdt>{
+                new Humanitix_Object_Mapping__mdt(
+                    DeveloperName = 'Tpl', Source_Resource__c = 'Event', Target_SObject__c = 'Campaign',
+                    External_Id_Field__c = 'Humanitix_Event_Id__c', Match_Strategy__c = 'ExternalId',
+                    Load_Order__c = 1, Is_Active__c = true
+                )
+            },
+            new List<Humanitix_Field_Mapping__mdt>{
+                new Humanitix_Field_Mapping__mdt(
+                    DeveloperName = 'Tpl_01', Object_Mapping__c = 'Tpl', Source_Path__c = '_id',
+                    Target_Field__c = 'Humanitix_Event_Id__c', Data_Type__c = 'Text', Transform__c = 'None',
+                    Is_External_Id__c = true, Is_Active__c = true
+                ),
+                new Humanitix_Field_Mapping__mdt(
+                    DeveloperName = 'Tpl_02', Object_Mapping__c = 'Tpl', Source_Path__c = 'name',
+                    Target_Field__c = 'Name', Data_Type__c = 'Text', Transform__c = 'Template',
+                    Transform_Arg__c = 'Humanitix', Is_Active__c = true
+                )
+            }
+        );
+        List<String> errors = cfg.validate();
+        System.assertEquals(1, errors.size(), String.join(errors, ' | '));
+        System.assertEquals(
+            'Field Mapping on "Tpl": Template needs a Transform Arg containing {value}, for example Humanitix - {value}.',
+            errors[0]
+        );
+    }
 }

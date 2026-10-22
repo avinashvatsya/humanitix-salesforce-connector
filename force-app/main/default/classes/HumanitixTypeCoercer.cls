@@ -9,7 +9,7 @@
  * fallback-aware coerce overload and resolve()).
  *
  * Transforms: None, Trim, Upper, Lower, IsoToDateTime, IsoToDateInTz, DecimalMoney,
- * BoolMap, StaticValue, Concat, JoinArray, ToJson.
+ * BoolMap, StaticValue, Concat, JoinArray, ToJson, Template.
  * Data types:  Text, LongText, Email, Phone, Url, DateTime, Date, Decimal, Currency,
  * Integer, Boolean, Reference (Reference values are returned as normalized strings —
  * the RelationshipResolver turns them into Ids).
@@ -153,6 +153,9 @@ public with sharing class HumanitixTypeCoercer {
                 }
                 String sep = String.isBlank(arg) ? ',' : arg;
                 return String.join(parts, sep);
+            }
+            when 'Template' {
+                return raw == null ? null : (arg == null ? '' : arg).replace('{value}', String.valueOf(raw));
             }
             when 'ToJson' {
                 return raw == null ? null : JSON.serialize(raw);
