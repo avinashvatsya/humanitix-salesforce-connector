@@ -147,7 +147,7 @@ permission set; scratch-org test matrix (full vs lean) in CI.
 
 ## ③ Per-event sync selection (roadmap depth)
 
-**Status: shipped in 1.3.0** (spec `2026-10-22-event-selection-and-account-per-event-design.md`).
+**Status: built for 1.3.0** (spec `2026-10-22-event-selection-and-account-per-event-design.md`).
 Built differently from the sketch below: the picker loads events live from the
 Humanitix API and the selection is an id list on the Sync Setting record, so
 unselected events create no rows at all. The same release adds the Contact
