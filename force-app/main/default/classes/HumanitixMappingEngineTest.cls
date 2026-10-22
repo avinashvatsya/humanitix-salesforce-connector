@@ -490,4 +490,46 @@ private class HumanitixMappingEngineTest {
         Contact c = [SELECT AccountId FROM Contact WHERE Email = 'frodo@shire.com'];
         System.assertEquals(household.Id, c.AccountId, 'BlanksOnly never replaces an existing Account');
     }
+
+    @IsTest
+    static void personAccountModeCreatesPersonAccountsWhenEnabled() {
+        if (!Schema.SObjectType.Account.fields.getMap().containsKey('ispersonaccount')) {
+            return; // Person Accounts are not enabled here; this runs in the htx-pa scratch org.
+        }
+        Id rtId = ((List<SObject>) Database.query(
+            'SELECT Id FROM RecordType WHERE SobjectType = \'Account\' AND IsPersonType = true AND IsActive = true LIMIT 1'
+        ))[0].Id;
+        List<Humanitix_Object_Mapping__mdt> oms = HumanitixDefaultMappings.objectMappings();
+        for (Humanitix_Object_Mapping__mdt om : oms) {
+            if (om.DeveloperName == 'Order_to_Contact') {
+                om.Is_Active__c = false;
+            }
+            if (om.DeveloperName == 'Order_to_PersonAccount') {
+                om.Is_Active__c = true;
+            }
+        }
+        List<Humanitix_Field_Mapping__mdt> fms = HumanitixDefaultMappings.fieldMappings();
+        for (Humanitix_Field_Mapping__mdt fm : fms) {
+            if (fm.DeveloperName == 'Order_to_PersonAccount_08') {
+                fm.Default_Value__c = rtId;
+            }
+        }
+        HumanitixMappingConfig.setInstance(HumanitixMappingConfig.fromRecords(oms, fms));
+
+        System.runAs(HumanitixTestDataFactory.marketingAdmin()) {
+            Test.startTest();
+            HumanitixMappingEngine.run('Event', HumanitixTestDataFactory.events());
+            HumanitixMappingEngine.run('Order', HumanitixTestDataFactory.orders());
+            Test.stopTest();
+        }
+
+        List<SObject> people = Database.query(
+            'SELECT Id, PersonContactId, LastName FROM Account WHERE PersonEmail = \'frodo@shire.com\''
+        );
+        System.assertEquals(1, people.size(), 'The buyer becomes one Person Account');
+        System.assertEquals('Baggins', people[0].get('LastName'));
+        Id personContactId = (Id) people[0].get('PersonContactId');
+        System.assertEquals(1, [SELECT COUNT() FROM CampaignMember WHERE ContactId = :personContactId], 'Campaign Member links the person contact');
+        System.assertEquals(personContactId, [SELECT Contact__c FROM Humanitix_Order__c WHERE Humanitix_Id__c = :HumanitixTestDataFactory.ORDER_ID].Contact__c);
+    }
 }

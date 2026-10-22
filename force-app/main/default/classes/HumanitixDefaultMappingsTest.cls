@@ -127,4 +127,38 @@ private class HumanitixDefaultMappingsTest {
         System.assertEquals(false, link.Overwrite_Blank__c);
         System.assertEquals(false, link.Is_Active__c);
     }
+
+    @IsTest
+    static void personAccountRecordsShipInactive() {
+        Humanitix_Object_Mapping__mdt pa;
+        for (Humanitix_Object_Mapping__mdt om : HumanitixDefaultMappings.objectMappings()) {
+            if (om.DeveloperName == 'Order_to_PersonAccount') {
+                pa = om;
+            }
+        }
+        System.assertNotEquals(null, pa, 'Order_to_PersonAccount must ship');
+        System.assertEquals(false, pa.Is_Active__c);
+        System.assertEquals('Order', pa.Source_Resource__c);
+        System.assertEquals('Account', pa.Target_SObject__c);
+        System.assertEquals('MatchByFields', pa.Match_Strategy__c);
+        System.assertEquals('PersonEmail', pa.Match_Field_Set__c);
+        System.assertEquals('BlanksOnly', pa.Update_Mode__c);
+        System.assertEquals('Humanitix_Contact_Key__pc', pa.External_Id_Field__c);
+
+        Map<String, String> targets = new Map<String, String>();
+        Humanitix_Field_Mapping__mdt recordType;
+        for (Humanitix_Field_Mapping__mdt fm : HumanitixDefaultMappings.fieldMappings()) {
+            if (fm.Object_Mapping__c == 'Order_to_PersonAccount') {
+                targets.put(fm.DeveloperName, fm.Target_Field__c);
+                if (fm.DeveloperName == 'Order_to_PersonAccount_08') {
+                    recordType = fm;
+                }
+            }
+        }
+        System.assertEquals(8, targets.size());
+        System.assertEquals('PersonEmail', targets.get('Order_to_PersonAccount_04'));
+        System.assertEquals('RecordTypeId', recordType.Target_Field__c);
+        System.assertEquals(null, recordType.Source_Path__c);
+        System.assertEquals(null, recordType.Default_Value__c, 'Filled per org when Person account is chosen');
+    }
 }

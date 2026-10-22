@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <label>Order to Person Account (optional)</label>
+    <protected>false</protected>
+    <values>
+        <field>Source_Resource__c</field>
+        <value xsi:type="xsd:string">Order</value>
+    </values>
+    <values>
+        <field>Target_SObject__c</field>
+        <value xsi:type="xsd:string">Account</value>
+    </values>
+    <values>
+        <field>Match_Strategy__c</field>
+        <value xsi:type="xsd:string">MatchByFields</value>
+    </values>
+    <values>
+        <field>Load_Order__c</field>
+        <value xsi:type="xsd:double">18.0</value>
+    </values>
+    <values>
+        <field>Is_Active__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>External_Id_Field__c</field>
+        <value xsi:type="xsd:string">Humanitix_Contact_Key__pc</value>
+    </values>
+    <values>
+        <field>Match_Field_Set__c</field>
+        <value xsi:type="xsd:string">PersonEmail</value>
+    </values>
+    <values>
+        <field>Update_Mode__c</field>
+        <value xsi:type="xsd:string">BlanksOnly</value>
+    </values>
+    <values>
+        <field>Description__c</field>
+        <value xsi:type="xsd:string">OPTIONAL: buyer becomes a Person Account, matched by email with blanks-only updates. Turned on by Contact account = Person account on the Sync Settings tab, which turns Order_to_Contact off.</value>
+    </values>
+</CustomMetadata>
