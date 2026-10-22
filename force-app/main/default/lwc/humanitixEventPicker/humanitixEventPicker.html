@@ -1,0 +1,64 @@
+<template>
+  <div class="slds-m-bottom_small">
+    <template lwc:if={hasPills}>
+      <lightning-pill-container items={pills} onitemremove={handleRemove}></lightning-pill-container>
+    </template>
+    <template lwc:else>
+      <p class="slds-text-body_small slds-text-color_weak">No events selected yet.</p>
+    </template>
+  </div>
+
+  <template lwc:if={hasError}>
+    <div class={errorClass} role="alert">
+      <div class="slds-media__body">
+        <p>{loadError}</p>
+      </div>
+    </div>
+  </template>
+
+  <div class="slds-grid slds-grid_vertical-align-end slds-m-bottom_x-small">
+    <div class="slds-col slds-grow">
+      <lightning-input
+        type="search"
+        label="Search events"
+        value={searchTerm}
+        onchange={handleSearch}
+      ></lightning-input>
+    </div>
+    <div class="slds-col slds-grow-none slds-m-left_small">
+      <lightning-button
+        label="Refresh"
+        icon-name="utility:refresh"
+        onclick={handleRefresh}
+        disabled={isLoading}
+      ></lightning-button>
+    </div>
+  </div>
+
+  <template lwc:if={capped}>
+    <div class={noticeClass} role="status">
+      <div class="slds-media__body">
+        <p>Only the first 5,000 events are listed. Search by name to narrow the list.</p>
+      </div>
+    </div>
+  </template>
+
+  <template lwc:if={isLoading}>
+    <div class="slds-is-relative slds-p-vertical_large">
+      <lightning-spinner alternative-text="Loading events from Humanitix" size="small"></lightning-spinner>
+    </div>
+  </template>
+
+  <template lwc:if={showTable}>
+    <div class="event-table">
+      <lightning-datatable
+        key-field="id"
+        data={filteredEvents}
+        columns={columns}
+        selected-rows={selected}
+        hide-checkbox-column={disabled}
+        onrowselection={handleRowSelection}
+      ></lightning-datatable>
+    </div>
+  </template>
+</template>
