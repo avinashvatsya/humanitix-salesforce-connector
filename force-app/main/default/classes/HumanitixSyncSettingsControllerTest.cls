@@ -254,6 +254,41 @@ private class HumanitixSyncSettingsControllerTest {
         System.assertEquals('Humanitix returned HTTP 401. Check the API key on the Connection tab.', message);
     }
 
+    private static String fetchFailureFor(Integer status) {
+        Test.setMock(HttpCalloutMock.class, new HumanitixCalloutMock().enqueue(status, '{"message":"x"}'));
+        String message;
+        Test.startTest();
+        try {
+            HumanitixSyncSettingsController.fetchHumanitixEvents(null);
+        } catch (AuraHandledException e) {
+            message = e.getMessage();
+        }
+        Test.stopTest();
+        return message;
+    }
+
+    @IsTest
+    static void fetchHumanitixEventsExplainsABusyHumanitix() {
+        System.assertEquals('Humanitix is busy or unavailable (HTTP 503). Try Refresh in a minute.', fetchFailureFor(503));
+    }
+
+    @IsTest
+    static void fetchHumanitixEventsKeepsOtherStatusesPlain() {
+        System.assertEquals('Humanitix returned HTTP 404.', fetchFailureFor(404));
+    }
+
+    @IsTest
+    static void calloutFailureMessageExplainsAMissingApiKey() {
+        System.assertEquals(
+            'Add your Humanitix API key on the Connection tab, then try again.',
+            HumanitixSyncSettingsController.calloutFailureMessage('Field HumanitixAPI.ApiKey does not exist. Check spelling.')
+        );
+        System.assertEquals(
+            'Humanitix could not be reached: Read timed out',
+            HumanitixSyncSettingsController.calloutFailureMessage('Read timed out')
+        );
+    }
+
     private static Map<String, Metadata.CustomMetadata> deployedByFullName() {
         Map<String, Metadata.CustomMetadata> out = new Map<String, Metadata.CustomMetadata>();
         for (Metadata.Metadata md : HumanitixMetadataWriter.lastContainer.getMetadata()) {
