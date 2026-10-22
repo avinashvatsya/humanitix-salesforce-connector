@@ -27,6 +27,7 @@ public with sharing class HumanitixSyncSettingsController {
         @AuraEnabled public String sinceMode;
         @AuraEnabled public String namedCredentialName;
         @AuraEnabled public Boolean recordExists;
+        @AuraEnabled public String contactAccount;
     }
 
     public class EventSummary {
@@ -59,6 +60,7 @@ public with sharing class HumanitixSyncSettingsController {
             dto.sinceMode = HumanitixSyncConfig.sinceMode();
             dto.namedCredentialName = HumanitixSyncConfig.namedCredentialName();
             dto.recordExists = Humanitix_Sync_Setting__mdt.getInstance('Default') != null;
+            dto.contactAccount = HumanitixContactAccountService.currentMode();
             return dto;
         } catch (Exception e) {
             throw new AuraHandledException(e.getMessage());
@@ -90,16 +92,33 @@ public with sharing class HumanitixSyncSettingsController {
             'Since_Mode__c' => dto.sinceMode,
             'Named_Credential_Name__c' => String.isBlank(dto.namedCredentialName) ? null : dto.namedCredentialName.trim()
         };
+        Map<String, Metadata.CustomMetadata> byFullName = new Map<String, Metadata.CustomMetadata>();
         try {
-            return HumanitixMetadataWriter.deploy(
-                new List<Metadata.CustomMetadata>{
-                    HumanitixMetadataWriter.record(RECORD_FULL_NAME, RECORD_LABEL, values)
-                },
-                'Sync Settings'
-            );
+            for (Metadata.CustomMetadata r : contactAccountRecords(dto)) {
+                byFullName.put(r.fullName, r);
+            }
+        } catch (HumanitixMappingException e) {
+            throw auraError('The Contact account change could not be applied: ' + e.getMessage());
+        }
+        // Put last so the edited settings win over a missing-default copy of the same record.
+        byFullName.put(RECORD_FULL_NAME, HumanitixMetadataWriter.record(RECORD_FULL_NAME, RECORD_LABEL, values));
+        try {
+            return HumanitixMetadataWriter.deploy(byFullName.values(), 'Sync Settings');
         } catch (Exception e) {
             throw new AuraHandledException('The settings deployment could not be started: ' + e.getMessage());
         }
+    }
+
+    /** Mapping records that put the org in the chosen Contact account option; none when unchanged or Custom. */
+    private static List<Metadata.CustomMetadata> contactAccountRecords(SettingsDto dto) {
+        if (String.isBlank(dto.contactAccount) || dto.contactAccount == HumanitixContactAccountService.MODE_CUSTOM) {
+            return new List<Metadata.CustomMetadata>();
+        }
+        HumanitixMappingAdminController.PendingChanges pending = HumanitixContactAccountService.changesFor(dto.contactAccount);
+        if (pending.objectMappings.isEmpty() && pending.fieldMappings.isEmpty()) {
+            return new List<Metadata.CustomMetadata>();
+        }
+        return HumanitixMappingAdminController.deployRecordsFor(pending);
     }
 
     @TestVisible
@@ -148,6 +167,9 @@ public with sharing class HumanitixSyncSettingsController {
         }
         if (dto.eventSelection == HumanitixSyncConfig.SELECTION_SELECTED && uniqueIds.isEmpty()) {
             problems.add('Select at least one event, or choose All events.');
+        }
+        if (String.isNotBlank(dto.contactAccount) && !HumanitixContactAccountService.ALL_MODES.contains(dto.contactAccount)) {
+            problems.add('Contact account must be None, EventAccount or PersonAccount.');
         }
         return problems;
     }

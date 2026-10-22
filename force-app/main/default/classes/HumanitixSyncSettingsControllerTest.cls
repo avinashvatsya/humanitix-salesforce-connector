@@ -253,4 +253,73 @@ private class HumanitixSyncSettingsControllerTest {
         Test.stopTest();
         System.assertEquals('Humanitix returned HTTP 401. Check the API key on the Connection tab.', message);
     }
+
+    private static Map<String, Metadata.CustomMetadata> deployedByFullName() {
+        Map<String, Metadata.CustomMetadata> out = new Map<String, Metadata.CustomMetadata>();
+        for (Metadata.Metadata md : HumanitixMetadataWriter.lastContainer.getMetadata()) {
+            Metadata.CustomMetadata cmt = (Metadata.CustomMetadata) md;
+            System.assert(!out.containsKey(cmt.fullName), 'Duplicate record in one deploy: ' + cmt.fullName);
+            out.put(cmt.fullName, cmt);
+        }
+        return out;
+    }
+
+    private static Object valueOf(Metadata.CustomMetadata cmt, String field) {
+        for (Metadata.CustomMetadataValue v : cmt.values) {
+            if (v.field == field) {
+                return v.value;
+            }
+        }
+        return null;
+    }
+
+    @IsTest
+    static void getSyncSettingsReportsTheContactAccountOption() {
+        System.assertEquals('None', HumanitixSyncSettingsController.getSyncSettings().contactAccount);
+    }
+
+    @IsTest
+    static void unchangedContactAccountDeploysOnlyTheSettingsRecord() {
+        HumanitixSyncSettingsController.SettingsDto dto = validDto();
+        dto.contactAccount = 'None';
+        Test.startTest();
+        HumanitixSyncSettingsController.saveSyncSettings(JSON.serialize(dto));
+        Test.stopTest();
+        System.assertEquals(new Set<String>{ 'Humanitix_Sync_Setting.Default' }, deployedByFullName().keySet());
+    }
+
+    @IsTest
+    static void customContactAccountLeavesTheMappingsAlone() {
+        HumanitixSyncSettingsController.SettingsDto dto = validDto();
+        dto.contactAccount = 'Custom';
+        Test.startTest();
+        HumanitixSyncSettingsController.saveSyncSettings(JSON.serialize(dto));
+        Test.stopTest();
+        System.assertEquals(new Set<String>{ 'Humanitix_Sync_Setting.Default' }, deployedByFullName().keySet());
+    }
+
+    @IsTest
+    static void switchingToEventAccountDeploysTheMappingsWithTheSettings() {
+        HumanitixSyncSettingsController.SettingsDto dto = validDto();
+        dto.contactAccount = 'EventAccount';
+        Test.startTest();
+        HumanitixSyncSettingsController.saveSyncSettings(JSON.serialize(dto));
+        Test.stopTest();
+
+        Map<String, Metadata.CustomMetadata> deployed = deployedByFullName();
+        System.assertEquals('Sync Settings', HumanitixMetadataWriter.lastPurpose);
+        System.assert(deployed.containsKey('Humanitix_Sync_Setting.Default'));
+        System.assertEquals(true, valueOf(deployed.get('Humanitix_Object_Mapping.Event_to_Account'), 'Is_Active__c'));
+        System.assertEquals(true, valueOf(deployed.get('Humanitix_Field_Mapping.Order_to_Contact_08'), 'Is_Active__c'));
+        System.assertEquals('Event', valueOf(deployed.get('Humanitix_Object_Mapping.Event_to_Account'), 'Source_Resource__c'), 'Other values are copied, not cleared');
+    }
+
+    @IsTest
+    static void validateRejectsAnUnknownContactAccountOption() {
+        HumanitixSyncSettingsController.SettingsDto dto = validDto();
+        dto.contactAccount = 'Household';
+        List<String> problems = HumanitixSyncSettingsController.validate(dto);
+        System.assertEquals(1, problems.size(), String.join(problems, ' | '));
+        System.assert(problems[0].startsWith('Contact account must be'), problems[0]);
+    }
 }
