@@ -196,7 +196,11 @@ public with sharing class HumanitixSyncQueueable implements Queueable, Database.
 
     private void promoteAndAdvance(String phase) {
         if (phase == 'Events') {
-            HumanitixSyncStateService.promote('events', 'Event', null, state.runId, state.runStart);
+            // Selected mode lists events in full and drops unselected ones, so it must not
+            // move the shared cursor: switching back to All would then skip them.
+            if (eventFilter() == null) {
+                HumanitixSyncStateService.promote('events', 'Event', null, state.runId, state.runStart);
+            }
             state.advancePhase();
         } else if (phase == 'Tags') {
             state.advancePhase(); // tags are a full pull; no cursor
