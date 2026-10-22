@@ -231,4 +231,74 @@ private class HumanitixSyncQueueableTest {
             throw new System.CalloutException('Read timed out');
         }
     }
+
+    private static HumanitixSyncState selectedState(List<String> phases, List<String> ids) {
+        HumanitixSyncState st = baseState(phases);
+        st.eventSelection = 'Selected';
+        st.selectedEventIds = ids;
+        return st;
+    }
+
+    @IsTest
+    static void selectedModeDropsUnselectedEventsBeforeMapping() {
+        HumanitixTestDataFactory.useShippedMappings();
+        Test.setMock(HttpCalloutMock.class, new HumanitixCalloutMock().enqueue(200, page('events', HumanitixTestDataFactory.eventJson())));
+        HumanitixSyncQueueable q = new HumanitixSyncQueueable(selectedState(new List<String>{ 'Events' }, new List<String>{ 'evt_other' }));
+
+        Test.startTest();
+        HumanitixSyncQueueable.StepOutcome oc = null;
+        System.runAs(HumanitixTestDataFactory.marketingAdmin()) {
+            oc = q.runStep();
+        }
+        Test.stopTest();
+
+        System.assertEquals(HumanitixSyncQueueable.StepOutcome.DONE, oc);
+        System.assertEquals(0, [SELECT COUNT() FROM Campaign WHERE Humanitix_Event_Id__c = :HumanitixTestDataFactory.EVENT_ID], 'Unselected events create nothing');
+        Humanitix_Sync_Log_Entry__c entry = [SELECT Status__c, Records_Processed__c, Error_Message__c FROM Humanitix_Sync_Log_Entry__c WHERE Resource__c = 'Event'];
+        System.assertEquals('Success', entry.Status__c);
+        System.assertEquals(0, entry.Records_Processed__c);
+        System.assert(entry.Error_Message__c.contains('1 event(s) not selected, skipped'), entry.Error_Message__c);
+        System.assertEquals(1, [SELECT COUNT() FROM Humanitix_Sync_State__c WHERE Cursor_Key__c = 'events'], 'An all-filtered page still promotes the cursor');
+    }
+
+    @IsTest
+    static void selectedModeKeepsSelectedEvents() {
+        HumanitixTestDataFactory.useShippedMappings();
+        Test.setMock(HttpCalloutMock.class, new HumanitixCalloutMock().enqueue(200, page('events', HumanitixTestDataFactory.eventJson())));
+        HumanitixSyncQueueable q = new HumanitixSyncQueueable(
+            selectedState(new List<String>{ 'Events' }, new List<String>{ HumanitixTestDataFactory.EVENT_ID })
+        );
+
+        Test.startTest();
+        System.runAs(HumanitixTestDataFactory.marketingAdmin()) {
+            q.runStep();
+        }
+        Test.stopTest();
+
+        System.assertEquals(1, [SELECT COUNT() FROM Campaign WHERE Humanitix_Event_Id__c = :HumanitixTestDataFactory.EVENT_ID]);
+        System.assertEquals(null, [SELECT Error_Message__c FROM Humanitix_Sync_Log_Entry__c WHERE Resource__c = 'Event'].Error_Message__c);
+    }
+
+    @IsTest
+    static void selectedModeOrdersSkipUnselectedEventsWithoutACallout() {
+        HumanitixCalloutMock mock = new HumanitixCalloutMock().enqueue(200, page('orders', HumanitixTestDataFactory.orderJson()));
+        Test.setMock(HttpCalloutMock.class, mock);
+        HumanitixSyncQueueable q = new HumanitixSyncQueueable(selectedState(new List<String>{ 'Orders' }, new List<String>{ 'evt_other' }));
+
+        Test.startTest();
+        HumanitixSyncQueueable.StepOutcome oc = q.runStep();
+        Test.stopTest();
+
+        System.assertEquals(HumanitixSyncQueueable.StepOutcome.DONE, oc, 'The only staged event is unselected, so the phase ends');
+        System.assertEquals(0, mock.requestedEndpoints.size(), 'No callout for an unselected event');
+    }
+
+    @IsTest
+    static void nextEventIdHonoursTheSelection() {
+        insert new Humanitix_Event__c(Name = 'Z', Humanitix_Id__c = 'evt_zzz', Is_Archived__c = false);
+        System.assertEquals(HumanitixTestDataFactory.EVENT_ID, HumanitixSyncStateService.nextEventId(null), 'no filter');
+        System.assertEquals('evt_zzz', HumanitixSyncStateService.nextEventId(null, new Set<String>{ 'evt_zzz' }));
+        System.assertEquals(null, HumanitixSyncStateService.nextEventId('evt_zzz', new Set<String>{ 'evt_zzz' }));
+        System.assertEquals(null, HumanitixSyncStateService.nextEventId(null, new Set<String>()), 'empty filter matches nothing');
+    }
 }
