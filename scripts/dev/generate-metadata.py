@@ -450,12 +450,13 @@ CMTS["Humanitix_Field_Mapping__mdt"] = dict(
               "Boolean", "Email", "Phone", "Url", "Reference"], default="Text", label="Data Type"),
         PICK("Transform__c",
              ["None", "Trim", "Upper", "Lower", "IsoToDateTime", "IsoToDateInTz",
-              "DecimalMoney", "BoolMap", "StaticValue", "Concat", "JoinArray", "ToJson"],
+              "DecimalMoney", "BoolMap", "StaticValue", "Concat", "JoinArray", "ToJson", "Template"],
              default="None", label="Transform"),
         T("Transform_Arg__c", label="Transform Arg",
           helpText="Optional argument. For Reference data type: '<TargetObject>.<ExternalIdField>'. "
                    "For IsoToDateInTz: the timezone path. For Concat: the prefix path/literal. "
-                   "For StaticValue: the literal value."),
+                   "For StaticValue: the literal value. "
+                   "For Template: text containing {value}, e.g. Humanitix - {value}."),
         T("Default_Source_Path__c", label="Default Source Path",
           helpText="Humanitix JSON path tried when the mapped value is blank after its Transform, "
                    "e.g. _id, email or $parent.name. Leave blank for no path fallback."),

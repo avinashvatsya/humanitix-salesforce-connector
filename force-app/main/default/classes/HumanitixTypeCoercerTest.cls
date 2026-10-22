@@ -179,4 +179,27 @@ private class HumanitixTypeCoercerTest {
         rec.put('eventId', 'evt_2');
         System.assertEquals('evt_2', (String) HumanitixTypeCoercer.resolve(f, rec, parent, parent), 'a present key wins');
     }
+
+    @IsTest
+    static void templateSubstitutesEveryValueToken() {
+        Map<String, Object> rec = new Map<String, Object>{ 'name' => 'Hobbit Dance Off' };
+        System.assertEquals(
+            'Humanitix - Hobbit Dance Off',
+            HumanitixTypeCoercer.coerce('Hobbit Dance Off', 'Text', 'Template', 'Humanitix - {value}', rec, null, rec)
+        );
+        System.assertEquals(
+            'A (A)',
+            HumanitixTypeCoercer.coerce('A', 'Text', 'Template', '{value} ({value})', rec, null, rec)
+        );
+    }
+
+    @IsTest
+    static void templateKeepsNullAndFallsThroughToTheDefault() {
+        Map<String, Object> rec = new Map<String, Object>();
+        System.assertEquals(null, HumanitixTypeCoercer.coerce(null, 'Text', 'Template', 'Humanitix - {value}', rec, null, rec));
+        System.assertEquals(
+            'Humanitix - Untitled',
+            HumanitixTypeCoercer.coerce(null, 'Text', 'Template', 'Humanitix - {value}', null, 'Untitled', rec, null, rec)
+        );
+    }
 }

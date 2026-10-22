@@ -23,7 +23,7 @@ public with sharing class HumanitixMappingAdminController {
     };
     private static final Set<String> TRANSFORMS = new Set<String>{
         'None', 'Trim', 'Upper', 'Lower', 'IsoToDateTime', 'IsoToDateInTz',
-        'DecimalMoney', 'BoolMap', 'StaticValue', 'Concat', 'JoinArray', 'ToJson'
+        'DecimalMoney', 'BoolMap', 'StaticValue', 'Concat', 'JoinArray', 'ToJson', 'Template'
     };
 
     public class ObjectMappingDto {
@@ -288,6 +288,9 @@ public with sharing class HumanitixMappingAdminController {
             }
             if (String.isNotBlank(fm.transform) && !TRANSFORMS.contains(fm.transform)) {
                 problems.add('Field mapping ' + rowName + ' has an unknown transform: ' + fm.transform + '.');
+            }
+            if (fm.transform == 'Template' && (String.isBlank(fm.transformArg) || !fm.transformArg.contains('{value}'))) {
+                problems.add('Field mapping ' + rowName + ' uses Template and needs a Transform Arg containing {value}, for example Humanitix - {value}.');
             }
             if (fm.transform == 'StaticValue') {
                 if (String.isBlank(fm.transformArg)) {

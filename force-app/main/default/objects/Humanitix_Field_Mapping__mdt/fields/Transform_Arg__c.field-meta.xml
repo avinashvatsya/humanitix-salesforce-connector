@@ -3,7 +3,7 @@
     <fullName>Transform_Arg__c</fullName>
     <fieldManageability>SubscriberControlled</fieldManageability>
     <label>Transform Arg</label>
-    <inlineHelpText>Optional argument. For Reference data type: '&lt;TargetObject&gt;.&lt;ExternalIdField&gt;'. For IsoToDateInTz: the timezone path. For Concat: the prefix path/literal. For StaticValue: the literal value.</inlineHelpText>
+    <inlineHelpText>Optional argument. For Reference data type: '&lt;TargetObject&gt;.&lt;ExternalIdField&gt;'. For IsoToDateInTz: the timezone path. For Concat: the prefix path/literal. For StaticValue: the literal value. For Template: text containing {value}, e.g. Humanitix - {value}.</inlineHelpText>
     <type>Text</type>
     <length>255</length>
     <required>false</required>

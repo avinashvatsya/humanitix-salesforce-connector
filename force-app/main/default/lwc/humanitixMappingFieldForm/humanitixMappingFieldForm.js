@@ -29,7 +29,8 @@ const TRANSFORM_OPTIONS = [
   { label: 'StaticValue', value: 'StaticValue' },
   { label: 'Concat', value: 'Concat' },
   { label: 'JoinArray', value: 'JoinArray' },
-  { label: 'ToJson', value: 'ToJson' }
+  { label: 'ToJson', value: 'ToJson' },
+  { label: 'Template', value: 'Template' }
 ];
 
 const NOTIFICATION_BASE = 'slds-scoped-notification slds-media slds-media_center';
@@ -37,6 +38,8 @@ const NOTIFICATION_BASE = 'slds-scoped-notification slds-media slds-media_center
 const NO_TARGET_FIELD = 'Choose a target field.';
 const NO_SOURCE_PATH =
   'Enter a source path, set a Default Source Path or Default Value, or choose the StaticValue transform.';
+const TEMPLATE_NEEDS_TOKEN =
+  'Template needs a Transform Arg containing {value}, for example Humanitix - {value}.';
 const STATIC_NEEDS_ARG = 'StaticValue writes the literal in Transform Arg; enter one.';
 const BAD_REFERENCE =
   'A Reference field needs a transform arg in the form Object.ExternalIdField, for example Humanitix_Event__c.Humanitix_Id__c.';
@@ -207,6 +210,9 @@ export default class HumanitixMappingFieldForm extends LightningElement {
     }
     if (this.isStaticValue && !hasText(this.transformArg)) {
       problems.push(STATIC_NEEDS_ARG);
+    }
+    if (this.transform === 'Template' && this.transformArg.indexOf('{value}') < 0) {
+      problems.push(TEMPLATE_NEEDS_TOKEN);
     }
     if (this.dataType === 'Reference' && this.transformArg.indexOf('.') < 1) {
       problems.push(BAD_REFERENCE);

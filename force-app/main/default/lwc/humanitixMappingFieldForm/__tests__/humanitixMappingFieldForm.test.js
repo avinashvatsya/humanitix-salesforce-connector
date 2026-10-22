@@ -327,4 +327,28 @@ describe('c-humanitix-mapping-field-form', () => {
     expect(dto.defaultSourcePath).toBeNull();
     expect(dto.defaultValue).toBeNull();
   });
+
+  it('offers Template and requires {value} in its arg', async () => {
+    const element = await create({ mapping: { ...EXISTING } });
+    const queued = listenForQueue(element);
+
+    chooseCombobox(element, 'Transform', 'Template');
+    await settle();
+    setInput(element, 'Transform Arg', 'Humanitix');
+    await settle();
+    click(element, 'Queue change');
+    await settle();
+
+    expect(queued).not.toHaveBeenCalled();
+    expect(text(element)).toContain('Template needs a Transform Arg containing {value}');
+
+    setInput(element, 'Transform Arg', 'Humanitix - {value}');
+    await settle();
+    click(element, 'Queue change');
+    await settle();
+
+    expect(queued).toHaveBeenCalledTimes(1);
+    expect(queued.mock.calls[0][0].detail.transform).toBe('Template');
+    expect(queued.mock.calls[0][0].detail.transformArg).toBe('Humanitix - {value}');
+  });
 });

@@ -365,4 +365,19 @@ private class HumanitixMappingAdminControllerTest {
         System.assert(names.contains('Humanitix_Object_Mapping.Event_to_Event'), names.toString());
         System.assert(names.containsAll(missingFullNames()), 'Missing defaults always ride along');
     }
+
+    @IsTest
+    static void structuralProblemsRequireTheTemplateToken() {
+        HumanitixMappingAdminController.FieldMappingDto dto = newFieldDto('Event_to_Event', 'Description__c');
+        dto.transform = 'Template';
+        dto.transformArg = 'no token';
+        HumanitixMappingAdminController.PendingChanges pending = new HumanitixMappingAdminController.PendingChanges();
+        pending.fieldMappings.add(dto);
+        List<String> problems = HumanitixMappingAdminController.structuralProblems(pending);
+        System.assertEquals(1, problems.size(), String.join(problems, ' | '));
+        System.assert(problems[0].contains('uses Template and needs a Transform Arg containing {value}'), problems[0]);
+
+        dto.transformArg = 'Humanitix - {value}';
+        System.assertEquals(0, HumanitixMappingAdminController.structuralProblems(pending).size());
+    }
 }
