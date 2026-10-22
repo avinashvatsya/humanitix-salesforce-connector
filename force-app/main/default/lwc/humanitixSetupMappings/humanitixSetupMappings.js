@@ -58,6 +58,8 @@ const FIELD_COLUMNS = [
 
 const DEFAULTS_BANNER =
   'These are the shipped default mappings. Your first save copies all defaults into this org as custom metadata records.';
+const NEW_DEFAULTS_BANNER =
+  'Some mappings that ship with this version are not in this org yet. They are listed here and are copied into this org with your next save.';
 const DEPLOYING = 'Saving mappings. Custom metadata deploys take a few seconds.';
 const SAVED = 'The mapping metadata has been updated.';
 const STILL_DEPLOYING =
@@ -187,7 +189,9 @@ export default class HumanitixSetupMappings extends LightningElement {
   }
 
   get defaultsBannerText() {
-    return DEFAULTS_BANNER;
+    return this.objectMappings.every((m) => m.fromDefaults === true)
+      ? DEFAULTS_BANNER
+      : NEW_DEFAULTS_BANNER;
   }
 
   get pendingCount() {

@@ -4,6 +4,14 @@ private class HumanitixMappingAdminControllerTest {
         return [SELECT COUNT() FROM Humanitix_Object_Mapping__mdt] > 0;
     }
 
+    private static Set<String> missingFullNames() {
+        Set<String> names = new Set<String>();
+        for (HumanitixDefaultMappings.DefaultRecord r : HumanitixMappingSeeder.missingDefaults()) {
+            names.add(r.fullName());
+        }
+        return names;
+    }
+
     private static String pendingJson(
         List<HumanitixMappingAdminController.ObjectMappingDto> objects,
         List<HumanitixMappingAdminController.FieldMappingDto> fields
@@ -42,7 +50,7 @@ private class HumanitixMappingAdminControllerTest {
         List<HumanitixMappingAdminController.ObjectMappingDto> mappings = HumanitixMappingAdminController.getObjectMappings();
 
         System.assert(!mappings.isEmpty(), 'Shipped defaults guarantee mappings even on a bare org');
-        Boolean expectDefaults = !orgHasRecords();
+        Boolean expectDefaults = missingFullNames().contains('Humanitix_Object_Mapping.Event_to_Event');
         HumanitixMappingAdminController.ObjectMappingDto eventMapping = findMapping('Event_to_Event');
         System.assertNotEquals(null, eventMapping, 'Event_to_Event ships with the connector');
         System.assertEquals(expectDefaults, eventMapping.fromDefaults);
@@ -171,30 +179,24 @@ private class HumanitixMappingAdminControllerTest {
     }
 
     @IsTest
-    static void savePendingMaterializesDefaultsOnlyOnBareOrg() {
+    static void savePendingAlwaysIncludesMissingDefaults() {
         HumanitixMappingAdminController.ObjectMappingDto edit = findMapping('Event_to_Event');
         edit.active = false;
         String payload = pendingJson(
             new List<HumanitixMappingAdminController.ObjectMappingDto>{ edit },
             new List<HumanitixMappingAdminController.FieldMappingDto>()
         );
+        Set<String> expected = missingFullNames();
+        expected.add('Humanitix_Object_Mapping.Event_to_Event');
 
         Test.startTest();
         HumanitixMappingAdminController.savePending(payload);
         Test.stopTest();
 
-        Integer deployed = HumanitixMetadataWriter.lastContainer.getMetadata().size();
-        if (orgHasRecords()) {
-            System.assertEquals(1, deployed, 'Seeded org deploys only the touched record');
-        } else {
-            System.assertEquals(
-                HumanitixDefaultMappings.records().size(),
-                deployed,
-                'Bare org must materialize every default with the edit overlaid'
-            );
-        }
+        Set<String> deployed = new Set<String>();
         for (Metadata.Metadata md : HumanitixMetadataWriter.lastContainer.getMetadata()) {
             Metadata.CustomMetadata cmt = (Metadata.CustomMetadata) md;
+            deployed.add(cmt.fullName);
             if (cmt.fullName == 'Humanitix_Object_Mapping.Event_to_Event') {
                 for (Metadata.CustomMetadataValue v : cmt.values) {
                     if (v.field == 'Is_Active__c') {
@@ -203,6 +205,7 @@ private class HumanitixMappingAdminControllerTest {
                 }
             }
         }
+        System.assertEquals(expected, deployed, 'Touched records plus every missing shipped default, nothing else');
     }
 
     @IsTest
@@ -315,5 +318,51 @@ private class HumanitixMappingAdminControllerTest {
         dto.transformArg = 'In Progress';
         dto.defaultValue = null;
         System.assertEquals(0, HumanitixMappingAdminController.structuralProblems(pending).size(), 'a plain StaticValue mapping is fine');
+    }
+
+    @IsTest
+    static void missingShippedMappingsAreListedAsDefaults() {
+        Set<String> missing = missingFullNames();
+        for (HumanitixMappingAdminController.ObjectMappingDto dto : HumanitixMappingAdminController.getObjectMappings()) {
+            Boolean isMissing = missing.contains('Humanitix_Object_Mapping.' + dto.devName);
+            System.assertEquals(isMissing, dto.fromDefaults == true, dto.devName);
+        }
+    }
+
+    @IsTest
+    static void effectiveMappingsResolveOrgRecordsAndDefaults() {
+        HumanitixMappingAdminController.ObjectMappingDto om = HumanitixMappingAdminController.effectiveObjectMapping('Event_to_Event');
+        System.assertNotEquals(null, om);
+        System.assertEquals('Humanitix_Event__c', om.targetSObject);
+        HumanitixMappingAdminController.FieldMappingDto fm = HumanitixMappingAdminController.effectiveFieldMapping('Event_to_Event_01');
+        System.assertNotEquals(null, fm);
+        System.assertEquals('Humanitix_Id__c', fm.targetField);
+        System.assertEquals(null, HumanitixMappingAdminController.effectiveObjectMapping('No_Such_Mapping'));
+        System.assertEquals(null, HumanitixMappingAdminController.effectiveFieldMapping('No_Such_Mapping_01'));
+    }
+
+    @IsTest
+    static void deployRecordsForValidatesBeforeReturningRecords() {
+        HumanitixMappingAdminController.PendingChanges bad = new HumanitixMappingAdminController.PendingChanges();
+        bad.fieldMappings.add(newFieldDto('Event_to_Event', 'No_Such_Field__c'));
+        Boolean threw = false;
+        try {
+            HumanitixMappingAdminController.deployRecordsFor(bad);
+        } catch (HumanitixMappingException e) {
+            threw = true;
+            System.assert(e.getMessage().contains('No_Such_Field__c'), e.getMessage());
+        }
+        System.assert(threw, 'An invalid change must throw');
+
+        HumanitixMappingAdminController.PendingChanges good = new HumanitixMappingAdminController.PendingChanges();
+        HumanitixMappingAdminController.ObjectMappingDto edit = findMapping('Event_to_Event');
+        edit.loadOrder = 11;
+        good.objectMappings.add(edit);
+        Set<String> names = new Set<String>();
+        for (Metadata.CustomMetadata cmt : HumanitixMappingAdminController.deployRecordsFor(good)) {
+            names.add(cmt.fullName);
+        }
+        System.assert(names.contains('Humanitix_Object_Mapping.Event_to_Event'), names.toString());
+        System.assert(names.containsAll(missingFullNames()), 'Missing defaults always ride along');
     }
 }

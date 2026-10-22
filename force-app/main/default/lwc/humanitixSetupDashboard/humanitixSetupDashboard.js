@@ -58,7 +58,7 @@ export default class HumanitixSetupDashboard extends LightningElement {
           showToast(
             this,
             'Installing default mappings',
-            'The default Humanitix mapping metadata is being created. It appears under Setup, Custom Metadata Types, within a minute.',
+            'Humanitix mapping metadata that ships with this version is being created. It appears under Setup, Custom Metadata Types, within a minute.',
             'info'
           );
         }
