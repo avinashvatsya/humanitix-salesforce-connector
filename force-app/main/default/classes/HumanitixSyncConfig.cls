@@ -5,6 +5,12 @@
  */
 public with sharing class HumanitixSyncConfig {
     public static final List<String> CANONICAL_ORDER = new List<String>{ 'Tags', 'Events', 'Orders', 'Tickets' };
+    public static final String SELECTION_ALL = 'All';
+    public static final String SELECTION_FUTURE_ONLY = 'FutureOnly';
+    public static final String SELECTION_SELECTED = 'Selected';
+    public static final Set<String> EVENT_SELECTIONS = new Set<String>{
+        SELECTION_ALL, SELECTION_FUTURE_ONLY, SELECTION_SELECTED
+    };
 
     @TestVisible
     private static Humanitix_Sync_Setting__mdt overrideSetting;
@@ -42,8 +48,56 @@ public with sharing class HumanitixSyncConfig {
         return ordered;
     }
 
+    /**
+     * Which events the sync handles. A blank (or unknown) Event Selection falls
+     * back to the legacy In Future Only checkbox, so orgs upgraded from 1.2
+     * behave exactly as before until an admin picks a value.
+     */
+    public static String eventSelection() {
+        String m = cfg().Event_Selection__c;
+        if (m != null && EVENT_SELECTIONS.contains(m)) {
+            return m;
+        }
+        return cfg().In_Future_Only__c == true ? SELECTION_FUTURE_ONLY : SELECTION_ALL;
+    }
+
     public static Boolean inFutureOnly() {
-        return cfg().In_Future_Only__c == true;
+        return eventSelection() == SELECTION_FUTURE_ONLY;
+    }
+
+    /**
+     * Selected Humanitix event ids in saved order. Read with SOQL (not
+     * getInstance) so the full Long Text Area value is always returned.
+     */
+    public static List<String> selectedEventIds() {
+        if (overrideSetting != null) {
+            return parseIds(overrideSetting.Selected_Event_Ids__c);
+        }
+        for (Humanitix_Sync_Setting__mdt s : [
+            SELECT Selected_Event_Ids__c
+            FROM Humanitix_Sync_Setting__mdt
+            WHERE DeveloperName = 'Default'
+            LIMIT 1
+        ]) {
+            return parseIds(s.Selected_Event_Ids__c);
+        }
+        return new List<String>();
+    }
+
+    /** Comma-separated ids to a trimmed, de-duplicated list in first-seen order. */
+    public static List<String> parseIds(String raw) {
+        List<String> out = new List<String>();
+        if (String.isBlank(raw)) {
+            return out;
+        }
+        Set<String> seen = new Set<String>();
+        for (String part : raw.split(',')) {
+            String id = part.trim();
+            if (String.isNotBlank(id) && seen.add(id)) {
+                out.add(id);
+            }
+        }
+        return out;
     }
 
     public static String ticketStatusFilter() {

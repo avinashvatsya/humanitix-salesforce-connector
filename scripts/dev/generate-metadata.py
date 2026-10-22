@@ -479,6 +479,11 @@ CMTS["Humanitix_Sync_Setting__mdt"] = dict(
         NUM("Max_Retries__c", precision=4, label="Max Retries"),
         NUM("Retry_Delay_Minutes__c", precision=4, label="Retry Delay Minutes"),
         PICK("Since_Mode__c", ["Modified", "FullPull"], default="Modified", label="Since Mode"),
+        PICK("Event_Selection__c", ["All", "FutureOnly", "Selected"], label="Event Selection",
+             helpText="Which events the sync handles: All, FutureOnly (events that have not ended) or Selected "
+                      "(only the ids in Selected Event Ids). Blank uses In Future Only."),
+        LT("Selected_Event_Ids__c", length=32768, label="Selected Event Ids",
+           helpText="Comma-separated Humanitix event ids synced when Event Selection is Selected."),
         T("Named_Credential_Name__c", label="Named Credential Name"),
         NUM("Consecutive_Failure_Threshold__c", precision=4, label="Consecutive Failure Threshold"),
     ])

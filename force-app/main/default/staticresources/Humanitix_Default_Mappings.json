@@ -2598,6 +2598,7 @@
    "values": {
     "Consecutive_Failure_Threshold__c": 5.0,
     "Enabled_Resources__c": "Events,Orders,Tickets,Tags",
+    "Event_Selection__c": "All",
     "In_Future_Only__c": false,
     "Max_Events_Per_Transaction__c": 25.0,
     "Max_Pages_Per_Transaction__c": 20.0,
