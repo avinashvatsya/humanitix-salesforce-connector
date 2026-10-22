@@ -157,7 +157,13 @@ public with sharing class HumanitixSyncQueueable implements Queueable, Database.
             if (state.inFutureOnly) {
                 q.put('inFutureOnly', 'true');
             }
-            addSince(q, 'events');
+            // In Selected mode the events listing is always fetched in full (it is a
+            // few cheap pages), so an event picked after a run is never hidden behind
+            // the events cursor. Orders and tickets keep their per-event cursors, and a
+            // newly picked event has none, so its orders and tickets are fetched in full.
+            if (eventFilter() == null) {
+                addSince(q, 'events');
+            }
         } else if (phase == 'Orders') {
             r.path = '/v1/events/' + state.currentEventId + '/orders';
             r.arrayField = 'orders';

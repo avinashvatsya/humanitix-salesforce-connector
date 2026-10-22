@@ -301,4 +301,40 @@ private class HumanitixSyncQueueableTest {
         System.assertEquals(null, HumanitixSyncStateService.nextEventId('evt_zzz', new Set<String>{ 'evt_zzz' }));
         System.assertEquals(null, HumanitixSyncStateService.nextEventId(null, new Set<String>()), 'empty filter matches nothing');
     }
+
+    @IsTest
+    static void selectedModeAlwaysListsEventsInFull() {
+        HumanitixSyncStateService.promote('events', 'Event', null, 'earlier-run', Datetime.now().addDays(-1));
+        HumanitixTestDataFactory.useShippedMappings();
+        HumanitixCalloutMock mock = new HumanitixCalloutMock().enqueue(200, page('events', HumanitixTestDataFactory.eventJson()));
+        Test.setMock(HttpCalloutMock.class, mock);
+        HumanitixSyncQueueable q = new HumanitixSyncQueueable(
+            selectedState(new List<String>{ 'Events' }, new List<String>{ HumanitixTestDataFactory.EVENT_ID })
+        );
+
+        Test.startTest();
+        System.runAs(HumanitixTestDataFactory.marketingAdmin()) {
+            q.runStep();
+        }
+        Test.stopTest();
+
+        System.assert(!mock.requestedEndpoints[0].contains('since='), 'Selected mode must not filter the events listing by the cursor: ' + mock.requestedEndpoints[0]);
+    }
+
+    @IsTest
+    static void allModeStillSendsTheEventsCursor() {
+        HumanitixSyncStateService.promote('events', 'Event', null, 'earlier-run', Datetime.now().addDays(-1));
+        HumanitixTestDataFactory.useShippedMappings();
+        HumanitixCalloutMock mock = new HumanitixCalloutMock().enqueue(200, page('events', HumanitixTestDataFactory.eventJson()));
+        Test.setMock(HttpCalloutMock.class, mock);
+        HumanitixSyncQueueable q = new HumanitixSyncQueueable(baseState(new List<String>{ 'Events' }));
+
+        Test.startTest();
+        System.runAs(HumanitixTestDataFactory.marketingAdmin()) {
+            q.runStep();
+        }
+        Test.stopTest();
+
+        System.assert(mock.requestedEndpoints[0].contains('since='), mock.requestedEndpoints[0]);
+    }
 }

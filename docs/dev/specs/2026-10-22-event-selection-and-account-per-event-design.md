@@ -30,11 +30,11 @@ compared with the connector on 2026-10-22:
   `Sync_Enabled__c` checkbox on `Humanitix_Event__c` ticked from a list view).
   Consequence: unselected events create nothing in Salesforce, not even a
   staging row, and the picker works before any sync has run.
-- **Selected mode keeps paging `/v1/events` with the `since` cursor and
-  filters the page**, rather than fetching each selected event with
-  `GET /v1/events/{id}`. The per-event GET has no `since` support, so every
-  delta run would re-fetch every selected event, and it would add a second
-  request shape to the queueable.
+- **Selected mode pages `/v1/events` in full (no `since`) and filters the
+  page**, rather than fetching each selected event with
+  `GET /v1/events/{id}`. Listing in full keeps an event picked after a run from
+  being hidden behind the events cursor, and it avoids adding a second request
+  shape to the queueable. Orders and tickets still use per-event cursors.
 - **Three-way picklist** (All / FutureOnly / Selected) replaces the Future
   events only checkbox in the UI; the checkbox field stays and is honoured
   when the picklist is blank, so upgraded orgs change nothing.
@@ -92,7 +92,11 @@ mode `Selected` with an empty id list throws
 
 **Events phase.** The request is unchanged: `inFutureOnly=true` is sent only in
 FutureOnly mode (through `state.inFutureOnly`), never in Selected mode, and
-`since` keeps working in every mode. In Selected mode the queueable drops every
+`since` is sent in All and FutureOnly modes only. In Selected mode the events
+listing is fetched in full every run (a few pages), so an event picked after a
+run is never hidden behind the events cursor, while Orders and Tickets keep
+their per-event cursors (a newly picked event has none, so its orders and
+tickets are fetched in full). In Selected mode the queueable drops every
 parsed record whose `_id` is not in `selectedEventIds` before calling
 `HumanitixMappingEngine.run`, so unselected events produce no records of any
 kind. The page's log entry message records `N event(s) not selected, skipped`
