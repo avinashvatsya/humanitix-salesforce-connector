@@ -1,0 +1,5 @@
+{
+  "orgName": "Humanitix Connector Person Accounts",
+  "edition": "developer",
+  "features": ["EnableSetPasswordInApi", "PersonAccounts"]
+}

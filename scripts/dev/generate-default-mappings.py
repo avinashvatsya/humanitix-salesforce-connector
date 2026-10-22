@@ -348,6 +348,25 @@ MAPPINGS.append(om(
         fm("name", "Name", "Text", "Template", arg="Humanitix - {value}"),
     ]))
 
+# O) Order -> Person Account (OPTIONAL, inactive): Contact account = Person account.
+# The __pc fields are the Person Account view of the packaged Contact fields; they
+# exist only in orgs with Person Accounts, which is why this ships inactive.
+MAPPINGS.append(om(
+    "Order_to_PersonAccount", "Order to Person Account (optional)", "Order", "Account",
+    ext_id_field="Humanitix_Contact_Key__pc", load=18, active=False,
+    match="MatchByFields", match_fields="PersonEmail", update_mode="BlanksOnly",
+    description="OPTIONAL: buyer becomes a Person Account, matched by email with blanks-only updates. Turned on "
+                "by Contact account = Person account on the Sync Settings tab, which turns Order_to_Contact off.",
+    fields=[
+        fm("email", "Humanitix_Contact_Key__pc", "Text", "Lower", extid=True),
+        fm("firstName", "FirstName"), fm("lastName", "LastName", default_value="Unknown"),
+        fm("email", "PersonEmail", "Email", "Lower"), fm("mobile", "PersonMobilePhone", "Phone"),
+        fm("organisation", "Humanitix_Organisation__pc"),
+        fm("_id", "Humanitix_Last_Order_Id__pc"),
+        # Default Value = the org's person record type Id, written when Person account is saved.
+        fm("", "RecordTypeId"),
+    ]))
+
 
 # ---- Emit -----------------------------------------------------------------
 

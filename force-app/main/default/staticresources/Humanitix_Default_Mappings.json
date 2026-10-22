@@ -1803,6 +1803,126 @@
   },
   {
    "type": "Humanitix_Field_Mapping",
+   "developerName": "Order_to_PersonAccount_01",
+   "label": "Order_to_PersonAccount :: Humanitix_Cont",
+   "values": {
+    "Data_Type__c": "Text",
+    "Is_Active__c": true,
+    "Is_External_Id__c": true,
+    "Object_Mapping__c": "Order_to_PersonAccount",
+    "Overwrite_Blank__c": true,
+    "Source_Path__c": "email",
+    "Target_Field__c": "Humanitix_Contact_Key__pc",
+    "Transform__c": "Lower"
+   }
+  },
+  {
+   "type": "Humanitix_Field_Mapping",
+   "developerName": "Order_to_PersonAccount_02",
+   "label": "Order_to_PersonAccount :: FirstName",
+   "values": {
+    "Data_Type__c": "Text",
+    "Is_Active__c": true,
+    "Is_External_Id__c": false,
+    "Object_Mapping__c": "Order_to_PersonAccount",
+    "Overwrite_Blank__c": true,
+    "Source_Path__c": "firstName",
+    "Target_Field__c": "FirstName",
+    "Transform__c": "None"
+   }
+  },
+  {
+   "type": "Humanitix_Field_Mapping",
+   "developerName": "Order_to_PersonAccount_03",
+   "label": "Order_to_PersonAccount :: LastName",
+   "values": {
+    "Data_Type__c": "Text",
+    "Default_Value__c": "Unknown",
+    "Is_Active__c": true,
+    "Is_External_Id__c": false,
+    "Object_Mapping__c": "Order_to_PersonAccount",
+    "Overwrite_Blank__c": true,
+    "Source_Path__c": "lastName",
+    "Target_Field__c": "LastName",
+    "Transform__c": "None"
+   }
+  },
+  {
+   "type": "Humanitix_Field_Mapping",
+   "developerName": "Order_to_PersonAccount_04",
+   "label": "Order_to_PersonAccount :: PersonEmail",
+   "values": {
+    "Data_Type__c": "Email",
+    "Is_Active__c": true,
+    "Is_External_Id__c": false,
+    "Object_Mapping__c": "Order_to_PersonAccount",
+    "Overwrite_Blank__c": true,
+    "Source_Path__c": "email",
+    "Target_Field__c": "PersonEmail",
+    "Transform__c": "Lower"
+   }
+  },
+  {
+   "type": "Humanitix_Field_Mapping",
+   "developerName": "Order_to_PersonAccount_05",
+   "label": "Order_to_PersonAccount :: PersonMobilePh",
+   "values": {
+    "Data_Type__c": "Phone",
+    "Is_Active__c": true,
+    "Is_External_Id__c": false,
+    "Object_Mapping__c": "Order_to_PersonAccount",
+    "Overwrite_Blank__c": true,
+    "Source_Path__c": "mobile",
+    "Target_Field__c": "PersonMobilePhone",
+    "Transform__c": "None"
+   }
+  },
+  {
+   "type": "Humanitix_Field_Mapping",
+   "developerName": "Order_to_PersonAccount_06",
+   "label": "Order_to_PersonAccount :: Humanitix_Orga",
+   "values": {
+    "Data_Type__c": "Text",
+    "Is_Active__c": true,
+    "Is_External_Id__c": false,
+    "Object_Mapping__c": "Order_to_PersonAccount",
+    "Overwrite_Blank__c": true,
+    "Source_Path__c": "organisation",
+    "Target_Field__c": "Humanitix_Organisation__pc",
+    "Transform__c": "None"
+   }
+  },
+  {
+   "type": "Humanitix_Field_Mapping",
+   "developerName": "Order_to_PersonAccount_07",
+   "label": "Order_to_PersonAccount :: Humanitix_Last",
+   "values": {
+    "Data_Type__c": "Text",
+    "Is_Active__c": true,
+    "Is_External_Id__c": false,
+    "Object_Mapping__c": "Order_to_PersonAccount",
+    "Overwrite_Blank__c": true,
+    "Source_Path__c": "_id",
+    "Target_Field__c": "Humanitix_Last_Order_Id__pc",
+    "Transform__c": "None"
+   }
+  },
+  {
+   "type": "Humanitix_Field_Mapping",
+   "developerName": "Order_to_PersonAccount_08",
+   "label": "Order_to_PersonAccount :: RecordTypeId",
+   "values": {
+    "Data_Type__c": "Text",
+    "Is_Active__c": true,
+    "Is_External_Id__c": false,
+    "Object_Mapping__c": "Order_to_PersonAccount",
+    "Overwrite_Blank__c": true,
+    "Target_Field__c": "RecordTypeId",
+    "Transform__c": "None"
+   }
+  },
+  {
+   "type": "Humanitix_Field_Mapping",
    "developerName": "Tag_to_Tag_01",
    "label": "Tag_to_Tag :: Humanitix_Id__c",
    "values": {
@@ -2607,6 +2727,22 @@
     "Match_Strategy__c": "ExternalId",
     "Source_Resource__c": "Order",
     "Target_SObject__c": "Humanitix_Order__c"
+   }
+  },
+  {
+   "type": "Humanitix_Object_Mapping",
+   "developerName": "Order_to_PersonAccount",
+   "label": "Order to Person Account (optional)",
+   "values": {
+    "Description__c": "OPTIONAL: buyer becomes a Person Account, matched by email with blanks-only updates. Turned on by Contact account = Person account on the Sync Settings tab, which turns Order_to_Contact off.",
+    "External_Id_Field__c": "Humanitix_Contact_Key__pc",
+    "Is_Active__c": false,
+    "Load_Order__c": 18.0,
+    "Match_Field_Set__c": "PersonEmail",
+    "Match_Strategy__c": "MatchByFields",
+    "Source_Resource__c": "Order",
+    "Target_SObject__c": "Account",
+    "Update_Mode__c": "BlanksOnly"
    }
   },
   {
