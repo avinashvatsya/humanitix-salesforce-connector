@@ -83,6 +83,20 @@
             onchange={handleContactAccountChange}
           ></lightning-radio-group>
           <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">{contactAccountHelp}</p>
+          <template lwc:if={showPersonRecordType}>
+            <lightning-combobox
+              label="Person account record type"
+              field-level-help="The Person Account record type new buyers are created with."
+              options={personRecordTypes}
+              value={personRecordTypeId}
+              disabled={isSaving}
+              onchange={handlePersonRecordTypeChange}
+              class="slds-m-top_x-small"
+            ></lightning-combobox>
+          </template>
+          <template lwc:if={personAccountsOffNote}>
+            <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">{personAccountsOffNote}</p>
+          </template>
           <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
             This switches the mappings listed on the Mappings tab. Changes there show here as Custom.
           </p>

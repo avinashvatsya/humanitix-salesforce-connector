@@ -382,4 +382,49 @@ describe('c-humanitix-setup-sync-settings', () => {
     const dto = JSON.parse(saveSyncSettings.mock.calls[0][0].settingsJson);
     expect(dto.contactAccount).toBe('Custom');
   });
+
+  it('leaves Person account out with a note when the org has no Person Accounts', async () => {
+    getSyncSettings.mockResolvedValue({ ...SETTINGS, personAccountsEnabled: false, personRecordTypes: [] });
+
+    const element = await createAndLoad();
+
+    expect(radioGroup(element, 'Contact account').options.map((o) => o.value)).toEqual(['None', 'EventAccount']);
+    expect(text(element)).toContain(
+      'Person account: Person Accounts are not enabled in this org. Salesforce Support can enable them, and that change cannot be undone.'
+    );
+  });
+
+  it('offers Person account and asks for a record type only when there are several', async () => {
+    getSyncSettings.mockResolvedValue({
+      ...SETTINGS,
+      personAccountsEnabled: true,
+      personRecordTypes: [
+        { value: '012000000000001AAA', label: 'Person Account' },
+        { value: '012000000000002AAA', label: 'Member' }
+      ],
+      personRecordTypeId: null
+    });
+
+    const element = await createAndLoad();
+    const group = radioGroup(element, 'Contact account');
+    expect(group.options.map((o) => o.value)).toEqual(['None', 'EventAccount', 'PersonAccount']);
+    expect(text(element)).not.toContain('Person Accounts are not enabled in this org.');
+    expect(byLabel(element, 'lightning-combobox', 'Person account record type')).toBeNull();
+
+    group.value = 'PersonAccount';
+    group.dispatchEvent(new CustomEvent('change', { detail: { value: 'PersonAccount' } }));
+    await settle();
+
+    expect(text(element)).toContain('Creates each buyer as a Person Account instead of a Contact, matched by email.');
+    const recordType = byLabel(element, 'lightning-combobox', 'Person account record type');
+    expect(recordType).not.toBeNull();
+    recordType.value = '012000000000002AAA';
+    recordType.dispatchEvent(new CustomEvent('change', { detail: { value: '012000000000002AAA' } }));
+    await settle();
+
+    await save(element);
+    const dto = JSON.parse(saveSyncSettings.mock.calls[0][0].settingsJson);
+    expect(dto.contactAccount).toBe('PersonAccount');
+    expect(dto.personRecordTypeId).toBe('012000000000002AAA');
+  });
 });
