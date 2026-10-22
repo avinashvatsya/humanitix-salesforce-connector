@@ -275,6 +275,37 @@
   },
   {
    "type": "Humanitix_Field_Mapping",
+   "developerName": "Event_to_Account_01",
+   "label": "Event_to_Account :: Humanitix_Event_Id__",
+   "values": {
+    "Data_Type__c": "Text",
+    "Is_Active__c": true,
+    "Is_External_Id__c": true,
+    "Object_Mapping__c": "Event_to_Account",
+    "Overwrite_Blank__c": true,
+    "Source_Path__c": "_id",
+    "Target_Field__c": "Humanitix_Event_Id__c",
+    "Transform__c": "None"
+   }
+  },
+  {
+   "type": "Humanitix_Field_Mapping",
+   "developerName": "Event_to_Account_02",
+   "label": "Event_to_Account :: Name",
+   "values": {
+    "Data_Type__c": "Text",
+    "Is_Active__c": true,
+    "Is_External_Id__c": false,
+    "Object_Mapping__c": "Event_to_Account",
+    "Overwrite_Blank__c": true,
+    "Source_Path__c": "name",
+    "Target_Field__c": "Name",
+    "Transform_Arg__c": "Humanitix - {value}",
+    "Transform__c": "Template"
+   }
+  },
+  {
+   "type": "Humanitix_Field_Mapping",
    "developerName": "Event_to_Campaign_01",
    "label": "Event_to_Campaign :: Humanitix_Event_Id_",
    "values": {
@@ -1132,6 +1163,22 @@
     "Overwrite_Blank__c": true,
     "Source_Path__c": "_id",
     "Target_Field__c": "Humanitix_Last_Order_Id__c",
+    "Transform__c": "None"
+   }
+  },
+  {
+   "type": "Humanitix_Field_Mapping",
+   "developerName": "Order_to_Contact_08",
+   "label": "Order_to_Contact :: AccountId",
+   "values": {
+    "Data_Type__c": "Reference",
+    "Is_Active__c": false,
+    "Is_External_Id__c": false,
+    "Object_Mapping__c": "Order_to_Contact",
+    "Overwrite_Blank__c": false,
+    "Source_Path__c": "eventId",
+    "Target_Field__c": "AccountId",
+    "Transform_Arg__c": "Account.Humanitix_Event_Id__c",
     "Transform__c": "None"
    }
   },
@@ -2431,6 +2478,20 @@
     "Source_Collection_Path__c": "ticketTypes",
     "Source_Resource__c": "Event",
     "Target_SObject__c": "Humanitix_Ticket_Type__c"
+   }
+  },
+  {
+   "type": "Humanitix_Object_Mapping",
+   "developerName": "Event_to_Account",
+   "label": "Event to Account (optional)",
+   "values": {
+    "Description__c": "OPTIONAL: one Account per Humanitix event, named Humanitix - Event Name. Turned on by Contact account = Event account on the Sync Settings tab, together with Order_to_Contact_08.",
+    "External_Id_Field__c": "Humanitix_Event_Id__c",
+    "Is_Active__c": false,
+    "Load_Order__c": 14.0,
+    "Match_Strategy__c": "ExternalId",
+    "Source_Resource__c": "Event",
+    "Target_SObject__c": "Account"
    }
   },
   {

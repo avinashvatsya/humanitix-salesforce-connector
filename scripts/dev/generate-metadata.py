@@ -530,6 +530,9 @@ STANDARD_FIELDS = {
         dict(api="Humanitix_Organisation_Key__c", type="text", length=255, externalId=True, unique=True,
              label="Humanitix Organisation Key",
              helpText="Optional: enable the Account mapping to create Accounts from order organisations."),
+        dict(api="Humanitix_Event_Id__c", type="text", length=255, externalId=True, unique=True,
+             label="Humanitix Event Id",
+             helpText="Used when Contact account is Event account on the Sync Settings tab: one Account per Humanitix event."),
     ],
 }
 
