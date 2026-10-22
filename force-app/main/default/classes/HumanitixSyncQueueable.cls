@@ -56,7 +56,7 @@ public with sharing class HumanitixSyncQueueable implements Queueable, Database.
             return finalizeAndDone();
         }
         if ((phase == 'Orders' || phase == 'Tickets') && String.isBlank(state.currentEventId)) {
-            String first = HumanitixSyncStateService.nextEventId(null);
+            String first = HumanitixSyncStateService.nextEventId(null, eventFilter());
             if (String.isBlank(first)) {
                 state.advancePhase();
                 return state.isDone() ? finalizeAndDone() : StepOutcome.PROCEED;
@@ -108,15 +108,23 @@ public with sharing class HumanitixSyncQueueable implements Queueable, Database.
         // SUCCESS
         state.attempt = 0;
         HumanitixApiResponse api = HumanitixApiResponse.parse(res.getBody(), req.arrayField, status);
+        // Judge "more pages" on the full page, before any selection filter shrinks it.
+        Boolean morePages = api.hasNextPage();
+        Integer notSelected = (phase == 'Events' && eventFilter() != null) ? keepSelected(api) : 0;
         HumanitixMappingEngine.MappingResult mr = HumanitixMappingEngine.run(req.resourceKey, api.records);
+        List<String> notes = new List<String>();
+        if (notSelected > 0) {
+            notes.add(notSelected + ' event(s) not selected, skipped');
+        }
+        notes.addAll(mr.errors);
         HumanitixSyncLogService.addEntry(
             state.logId, req.resourceKey, state.currentEventId, mr.hasErrors() ? 'Partial' : 'Success',
             mr.recordsProcessed, mr.recordsFailed, state.page, status, 0,
-            mr.errors.isEmpty() ? null : String.join(mr.errors, ' | ')
+            notes.isEmpty() ? null : String.join(notes, ' | ')
         );
         // Advance the page from our own state (monotonic), not the server echo, and
         // stop at the ceiling so a metadata-less response can't loop forever.
-        if (api.hasNextPage() && state.page < MAX_PAGES_PER_WORK_ITEM) {
+        if (morePages && state.page < MAX_PAGES_PER_WORK_ITEM) {
             state.page = state.page + 1;
         } else {
             promoteAndAdvance(phase);
@@ -203,7 +211,7 @@ public with sharing class HumanitixSyncQueueable implements Queueable, Database.
     }
 
     private void moveToNextEventOrPhase() {
-        String next = HumanitixSyncStateService.nextEventId(state.currentEventId);
+        String next = HumanitixSyncStateService.nextEventId(state.currentEventId, eventFilter());
         if (String.isBlank(next)) {
             state.advancePhase();
         } else {
@@ -214,6 +222,28 @@ public with sharing class HumanitixSyncQueueable implements Queueable, Database.
     }
 
     // ---- helpers ----------------------------------------------------------
+
+    /** The selected event ids in Selected mode; null means "every event". */
+    private Set<String> eventFilter() {
+        if (state.eventSelection != HumanitixSyncConfig.SELECTION_SELECTED) {
+            return null;
+        }
+        return state.selectedEventIds == null ? new Set<String>() : new Set<String>(state.selectedEventIds);
+    }
+
+    /** Drops unselected events from the page in place; returns how many were dropped. */
+    private Integer keepSelected(HumanitixApiResponse api) {
+        Set<String> wanted = eventFilter();
+        List<Object> kept = new List<Object>();
+        for (Object o : api.records) {
+            if (o instanceof Map<String, Object> && wanted.contains(String.valueOf(((Map<String, Object>) o).get('_id')))) {
+                kept.add(o);
+            }
+        }
+        Integer dropped = api.records.size() - kept.size();
+        api.records = kept;
+        return dropped;
+    }
 
     private String cursorKey() {
         String phase = safePhase();

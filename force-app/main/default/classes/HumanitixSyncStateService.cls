@@ -65,24 +65,23 @@ public with sharing class HumanitixSyncStateService {
      * first). Returns null when there are no more events.
      */
     public static String nextEventId(String afterId) {
-        List<Humanitix_Event__c> rows;
-        if (String.isBlank(afterId)) {
-            rows = [
-                SELECT Humanitix_Id__c
-                FROM Humanitix_Event__c
-                WHERE Is_Archived__c = false AND Humanitix_Id__c != null
-                ORDER BY Humanitix_Id__c ASC
-                LIMIT 1
-            ];
-        } else {
-            rows = [
-                SELECT Humanitix_Id__c
-                FROM Humanitix_Event__c
-                WHERE Is_Archived__c = false AND Humanitix_Id__c != null AND Humanitix_Id__c > :afterId
-                ORDER BY Humanitix_Id__c ASC
-                LIMIT 1
-            ];
+        return nextEventId(afterId, null);
+    }
+
+    /**
+     * As nextEventId(afterId), restricted to onlyIds when it is not null (Event
+     * Selection = Selected). An empty set matches nothing.
+     */
+    public static String nextEventId(String afterId, Set<String> onlyIds) {
+        String soql = 'SELECT Humanitix_Id__c FROM Humanitix_Event__c WHERE Is_Archived__c = false AND Humanitix_Id__c != null';
+        if (String.isNotBlank(afterId)) {
+            soql += ' AND Humanitix_Id__c > :afterId';
         }
+        if (onlyIds != null) {
+            soql += ' AND Humanitix_Id__c IN :onlyIds';
+        }
+        soql += ' ORDER BY Humanitix_Id__c ASC LIMIT 1';
+        List<Humanitix_Event__c> rows = Database.query(soql);
         return rows.isEmpty() ? null : rows[0].Humanitix_Id__c;
     }
 }
