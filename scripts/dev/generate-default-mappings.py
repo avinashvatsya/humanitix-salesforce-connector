@@ -390,6 +390,7 @@ def emit_sync_setting():
         val("Max_Events_Per_Transaction__c", "25.0", "double"),
         val("Enabled_Resources__c", "Events,Orders,Tickets,Tags", "string"),
         val("In_Future_Only__c", "false", "boolean"),
+        val("Event_Selection__c", "All", "string"),
         val("Max_Retries__c", "5.0", "double"),
         val("Retry_Delay_Minutes__c", "5.0", "double"),
         val("Since_Mode__c", "Modified", "string"),

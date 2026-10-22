@@ -48,4 +48,44 @@ private class HumanitixSyncConfigTest {
         insert new Humanitix_Sync_Toggle__c(SetupOwnerId = UserInfo.getOrganizationId(), Sync_Enabled__c = false);
         System.assertEquals(false, HumanitixSyncConfig.syncEnabled());
     }
+
+    @IsTest
+    static void eventSelectionFallsBackToTheLegacyCheckbox() {
+        HumanitixSyncConfig.overrideSetting = new Humanitix_Sync_Setting__mdt(In_Future_Only__c = true);
+        System.assertEquals('FutureOnly', HumanitixSyncConfig.eventSelection(), 'blank picklist + checkbox => FutureOnly');
+        System.assertEquals(true, HumanitixSyncConfig.inFutureOnly());
+
+        HumanitixSyncConfig.overrideSetting = new Humanitix_Sync_Setting__mdt(In_Future_Only__c = false);
+        System.assertEquals('All', HumanitixSyncConfig.eventSelection(), 'blank picklist, no checkbox => All');
+        System.assertEquals(false, HumanitixSyncConfig.inFutureOnly());
+    }
+
+    @IsTest
+    static void eventSelectionPicklistWinsOverTheCheckbox() {
+        HumanitixSyncConfig.overrideSetting = new Humanitix_Sync_Setting__mdt(
+            Event_Selection__c = 'Selected',
+            In_Future_Only__c = true
+        );
+        System.assertEquals('Selected', HumanitixSyncConfig.eventSelection());
+        System.assertEquals(false, HumanitixSyncConfig.inFutureOnly(), 'inFutureOnly is true only in FutureOnly mode');
+
+        HumanitixSyncConfig.overrideSetting = new Humanitix_Sync_Setting__mdt(Event_Selection__c = 'All', In_Future_Only__c = true);
+        System.assertEquals('All', HumanitixSyncConfig.eventSelection());
+    }
+
+    @IsTest
+    static void selectedEventIdsAreTrimmedDeduplicatedAndOrdered() {
+        HumanitixSyncConfig.overrideSetting = new Humanitix_Sync_Setting__mdt(
+            Selected_Event_Ids__c = ' evt_b , evt_a,,evt_b ,  '
+        );
+        System.assertEquals(new List<String>{ 'evt_b', 'evt_a' }, HumanitixSyncConfig.selectedEventIds());
+
+        HumanitixSyncConfig.overrideSetting = new Humanitix_Sync_Setting__mdt();
+        System.assertEquals(new List<String>(), HumanitixSyncConfig.selectedEventIds(), 'blank => empty list');
+    }
+
+    @IsTest
+    static void parseIdsHandlesNull() {
+        System.assertEquals(new List<String>(), HumanitixSyncConfig.parseIds(null));
+    }
 }

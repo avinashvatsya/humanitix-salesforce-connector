@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Event_Selection__c</fullName>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <label>Event Selection</label>
+    <inlineHelpText>Which events the sync handles: All, FutureOnly (events that have not ended) or Selected (only the ids in Selected Event Ids). Blank uses In Future Only.</inlineHelpText>
+    <type>Picklist</type>
+    <valueSet>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>All</fullName>
+                <default>false</default>
+                <label>All</label>
+            </value>
+            <value>
+                <fullName>FutureOnly</fullName>
+                <default>false</default>
+                <label>FutureOnly</label>
+            </value>
+            <value>
+                <fullName>Selected</fullName>
+                <default>false</default>
+                <label>Selected</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>
