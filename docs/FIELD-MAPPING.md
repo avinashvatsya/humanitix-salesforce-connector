@@ -178,11 +178,11 @@ results.
 | Ticket | `Humanitix_Ticket__c` (+ `Humanitix_Ticket_Attribute__c`) — attendee detail, linked to its Event and Order |
 | Tag | `Humanitix_Tag__c` |
 
-Shipped **inactive** (flip `Is Active` to enable, or use the Contact account
-option on the Sync Settings tab for the last three): **Order → Lead**,
-**Order → Account** (by organisation), **Event → Account** (one Account per
-event, with the Order to Contact `AccountId` field mapping `Order_to_Contact_08`)
-and **Order → Person Account**.
+Shipped **inactive** (flip `Is Active` to enable; for **Event → Account** and
+**Order → Person Account**, use the Contact account option on the Sync Settings
+tab instead): **Order → Lead**, **Order → Account** (by organisation),
+**Event → Account** (one Account per event, with the Order to Contact
+`AccountId` field mapping `Order_to_Contact_08`) and **Order → Person Account**.
 
 The faithful `Humanitix_*__c` staging objects are the system of record; the
 standard-object mappings are the CRM-facing layer you can retarget.
