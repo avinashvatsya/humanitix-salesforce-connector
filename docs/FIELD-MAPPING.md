@@ -84,7 +84,7 @@ One record per *(source path → target field)*, linked to its Object Mapping by
 the timezone; avoids UTC off-by-one on dates), `DecimalMoney` (pass-through — money
 is already in major units), `BoolMap`, `StaticValue` (arg = the literal),
 `Concat` (arg = a prefix path/literal; joins with `:`), `JoinArray` (arg =
-separator, default `,`), `ToJson`.
+separator, default `,`), `ToJson`. `Template` (arg = text containing `{value}`, for example `Humanitix - {value}`; every `{value}` is replaced by the source value, and a blank source stays blank so the defaults apply).
 
 ### References (lookups)
 
@@ -178,8 +178,11 @@ results.
 | Ticket | `Humanitix_Ticket__c` (+ `Humanitix_Ticket_Attribute__c`) — attendee detail, linked to its Event and Order |
 | Tag | `Humanitix_Tag__c` |
 
-Shipped **inactive** (flip `Is Active` to enable): **Order → Lead** and
-**Order → Account**.
+Shipped **inactive** (flip `Is Active` to enable, or use the Contact account
+option on the Sync Settings tab for the last three): **Order → Lead**,
+**Order → Account** (by organisation), **Event → Account** (one Account per
+event, with the Order to Contact `AccountId` field mapping `Order_to_Contact_08`)
+and **Order → Person Account**.
 
 The faithful `Humanitix_*__c` staging objects are the system of record; the
 standard-object mappings are the CRM-facing layer you can retarget.
@@ -206,7 +209,7 @@ event object.
 
 **Upgrade safety.** The default mapping records ship with *Subscriber Controlled*
 fields, so your edits to them survive package upgrades. Prefer editing existing
-records or adding your own over deleting shipped ones.
+records or adding your own over deleting shipped ones. Mappings that ship in a newer version reach an upgraded org the first time the *Humanitix Setup* tab is opened after the upgrade. They arrive inactive, and the Mappings tab lists them until then.
 
 > Tip: after any mapping change, the engine validates every active mapping against
 > your org schema on the next run and fails fast with a clear message if a target
