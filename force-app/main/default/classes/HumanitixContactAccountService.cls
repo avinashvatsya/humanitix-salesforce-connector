@@ -89,17 +89,26 @@ public with sharing class HumanitixContactAccountService {
         return out;
     }
 
-    /** The record type saved on Order_to_PersonAccount_08, or the only one available. */
+    /**
+     * The record type saved on Order_to_PersonAccount_08 if it is still
+     * available to the running user, otherwise the only one available.
+     */
     public static String currentPersonRecordTypeId() {
         HumanitixMappingAdminController.FieldMappingDto f = HumanitixMappingAdminController.effectiveFieldMapping(PERSON_RECORD_TYPE_FIELD);
-        String current = f == null ? null : toId18(f.defaultValue);
-        if (current == null) {
-            List<RecordTypeOption> types = personRecordTypes();
-            if (types.size() == 1) {
-                return types[0].value;
+        return pickPersonRecordType(f == null ? null : toId18(f.defaultValue), personRecordTypes());
+    }
+
+    @TestVisible
+    private static String pickPersonRecordType(String savedId, List<RecordTypeOption> types) {
+        String saved = toId18(savedId);
+        if (saved != null) {
+            for (RecordTypeOption o : types) {
+                if (o.value == saved) {
+                    return saved;
+                }
             }
         }
-        return current;
+        return types.size() == 1 ? types[0].value : null;
     }
 
     public static HumanitixMappingAdminController.PendingChanges changesFor(String mode) {
@@ -131,9 +140,13 @@ public with sharing class HumanitixContactAccountService {
     }
 
     private static void applyPersonRecordType(HumanitixMappingAdminController.PendingChanges pending, String requested) {
-        String chosen = String.isBlank(requested) ? currentPersonRecordTypeId() : toId18(requested);
+        List<RecordTypeOption> types = personRecordTypes();
+        HumanitixMappingAdminController.FieldMappingDto saved = HumanitixMappingAdminController.effectiveFieldMapping(PERSON_RECORD_TYPE_FIELD);
+        String chosen = String.isBlank(requested)
+            ? pickPersonRecordType(saved == null ? null : toId18(saved.defaultValue), types)
+            : toId18(requested);
         Set<String> allowed = new Set<String>();
-        for (RecordTypeOption o : personRecordTypes()) {
+        for (RecordTypeOption o : types) {
             allowed.add(o.value);
         }
         if (chosen == null || !allowed.contains(chosen)) {
