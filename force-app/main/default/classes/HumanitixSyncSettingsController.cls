@@ -28,6 +28,9 @@ public with sharing class HumanitixSyncSettingsController {
         @AuraEnabled public String namedCredentialName;
         @AuraEnabled public Boolean recordExists;
         @AuraEnabled public String contactAccount;
+        @AuraEnabled public Boolean personAccountsEnabled;
+        @AuraEnabled public List<HumanitixContactAccountService.RecordTypeOption> personRecordTypes;
+        @AuraEnabled public String personRecordTypeId;
     }
 
     public class EventSummary {
@@ -61,6 +64,9 @@ public with sharing class HumanitixSyncSettingsController {
             dto.namedCredentialName = HumanitixSyncConfig.namedCredentialName();
             dto.recordExists = Humanitix_Sync_Setting__mdt.getInstance('Default') != null;
             dto.contactAccount = HumanitixContactAccountService.currentMode();
+            dto.personAccountsEnabled = HumanitixContactAccountService.personAccountsEnabled();
+            dto.personRecordTypes = HumanitixContactAccountService.personRecordTypes();
+            dto.personRecordTypeId = HumanitixContactAccountService.currentPersonRecordTypeId();
             return dto;
         } catch (Exception e) {
             throw new AuraHandledException(e.getMessage());
@@ -114,7 +120,7 @@ public with sharing class HumanitixSyncSettingsController {
         if (String.isBlank(dto.contactAccount) || dto.contactAccount == HumanitixContactAccountService.MODE_CUSTOM) {
             return new List<Metadata.CustomMetadata>();
         }
-        HumanitixMappingAdminController.PendingChanges pending = HumanitixContactAccountService.changesFor(dto.contactAccount);
+        HumanitixMappingAdminController.PendingChanges pending = HumanitixContactAccountService.changesFor(dto.contactAccount, dto.personRecordTypeId);
         if (pending.objectMappings.isEmpty() && pending.fieldMappings.isEmpty()) {
             return new List<Metadata.CustomMetadata>();
         }
