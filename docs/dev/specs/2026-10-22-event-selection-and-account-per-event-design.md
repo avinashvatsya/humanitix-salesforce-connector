@@ -1,9 +1,10 @@
-# Event Selection and Account per Event: Design
+# Event Selection and Contact Account: Design
 
 **Date:** 2026-10-22
 **Status:** Approved in brainstorming. Implements roadmap feature 3 (per-event
-sync selection) with one deviation from the roadmap sketch, and adds Account per
-event. Target: package version 1.3.0.
+sync selection) with one deviation from the roadmap sketch, and adds a Contact
+account choice (None, Event account, Person account). Target: package version
+1.3.0 (milestone 3 may ship as 1.4.0, see Milestones).
 
 ## Context and goal
 
@@ -15,13 +16,13 @@ compared with the connector on 2026-10-22:
 | --- | --- | --- |
 | Sync Events: All / Selected Events, with an event picker | Future events only checkbox | Event Selection: All / Future only / Selected, with an in-app picker |
 | Contact Settings (three radios) | Update Mode on the Order to Contact mapping (Mappings tab) | Unchanged |
-| Create Account per event ("Humanitix - Event Name") | Not available. Order to Account is keyed on the buyer's organisation and ships inactive | Event to Account mapping, Contact AccountId mapping, and a toggle |
+| Create Account per event ("Humanitix - Event Name") | Not available. Order to Account is keyed on the buyer's organisation and ships inactive | Contact account choice: None (NPSP households), Event account, or Person account |
 | Add Attendees to Campaign toggle | Order to Campaign Member mapping, active | Unchanged |
 | Update Frequency: Daily / Hourly / On Request | Schedule tab | Unchanged |
 
 ### Decisions made in brainstorming
 
-- **Scope:** event selection and Account per event. A Contact Settings radio
+- **Scope:** event selection and a Contact account choice. A Contact Settings radio
   and an Add Attendees toggle on the Sync Settings tab are deferred; both
   capabilities already exist as mapping settings.
 - **Picker sourced live from the Humanitix API; selection stored as an id list
@@ -37,8 +38,17 @@ compared with the connector on 2026-10-22:
 - **Three-way picklist** (All / FutureOnly / Selected) replaces the Future
   events only checkbox in the UI; the checkbox field stays and is honoured
   when the picklist is blank, so upgraded orgs change nothing.
-- **The Account toggle saves with Save Settings** in the same metadata deploy
-  as the sync setting record: one deploy, one poll.
+- **Contact account is one three-way choice, not a toggle:** None, Event
+  account, Person account. Household accounts are not built by the connector:
+  in NPSP orgs with the Household Account model, NPSP already creates a
+  Household Account when a Contact is inserted without one, so None covers
+  them. Connector-built households for non-NPSP orgs are out of scope.
+- **The Contact account choice saves with Save Settings** in the same metadata
+  deploy as the sync setting record: one deploy, one poll. It is stored only
+  as the active state of the mapping records it switches, so the Mappings tab
+  and the Sync Settings tab can never disagree.
+- **Person account is its own milestone**, so event selection and Event
+  account are not held up by it.
 - **Seeder fix:** upgraded orgs must receive newly shipped default mappings,
   which does not happen today.
 
@@ -117,7 +127,7 @@ staged event.
 - Choosing Selected events reveals the event picker component below the radio
   group.
 - `SettingsDto` replaces `inFutureOnly` with `eventSelection` (String) and
-  `selectedEventIds` (`List<String>`); `accountPerEvent` is added by feature 2.
+  `selectedEventIds` (`List<String>`); `contactAccount` is added by feature 2.
   `saveSyncSettings` writes `Event_Selection__c`, `Selected_Event_Ids__c`
   (comma-joined, null when the list is empty) and
   `In_Future_Only__c = (eventSelection == 'FutureOnly')` so the legacy field
@@ -169,15 +179,22 @@ method is not cacheable: the list is live.
   inline in an error-themed scoped notification, keeps showing the saved ids as
   pills, and offers a Refresh button.
 
-## Feature 2: Account per event
+## Feature 2: Contact account
 
-### Metadata
+One setting decides which Account a Humanitix buyer is linked to:
+
+| Value | Label | What happens |
+| --- | --- | --- |
+| `None` | None (org default) | Today's behaviour. The connector leaves `Contact.AccountId` blank. In NPSP orgs, NPSP creates a Household Account for each new Contact. |
+| `EventAccount` | Event account | One Account per synced event, named `Humanitix - Event Name`; buyers without an Account are linked to it. |
+| `PersonAccount` | Person account | Buyers are created as Person Accounts instead of Contacts, matched by email. Needs Person Accounts enabled in the org. |
+
+### Shared metadata
 
 - `Account.Humanitix_Event_Id__c`: Text(255), external id, unique, label
-  "Humanitix Event Id", help text "Optional: enable Create an Account per event
-  on the Sync Settings tab, or the Event to Account mapping, to create one
-  Account per Humanitix event." Declared in `STANDARD_FIELDS["Account"]` so the
-  permission set FLS is generated with it.
+  "Humanitix Event Id", help text "Used when Contact account is Event account
+  on the Sync Settings tab: one Account per Humanitix event." Declared in
+  `STANDARD_FIELDS["Account"]` so the permission set FLS is generated with it.
 - The `Transform__c` picklist on `Humanitix_Field_Mapping__mdt` gains
   `Template`.
 
@@ -197,15 +214,17 @@ which cannot produce the official connector's naming).
 ### Shipped mappings
 
 Appended to `scripts/dev/generate-default-mappings.py`; shipped entries are
-never removed or reordered. All three records ship inactive.
+never removed or reordered. Every new record ships inactive, and
+`HumanitixMappingConfig.validate()` already skips inactive mappings, so the
+Person Account fields below never fail validation in an org without Person
+Accounts.
 
 **Object mapping `Event_to_Account`** ("Event to Account (optional)"): Source
 Resource `Event`, Target `Account`, External Id Field `Humanitix_Event_Id__c`,
 Match Strategy `ExternalId`, Update Mode `Always`, Load Order 14, Is Active
 false. Description: "OPTIONAL: one Account per Humanitix event, named
-Humanitix - Event Name. Turn on with Create an Account per event on the Sync
-Settings tab, which also activates the Contact AccountId field mapping
-Order_to_Contact_08."
+Humanitix - Event Name. Turned on by Contact account = Event account on the
+Sync Settings tab, together with Order_to_Contact_08."
 
 | Field mapping | Source Path | Target Field | Data Type | Transform | Transform Arg |
 | --- | --- | --- | --- | --- | --- |
@@ -218,49 +237,126 @@ Order_to_Contact_08."
 Account never clears an existing AccountId), Is Active false.
 
 Load Order 14 places the Account between the staging event (10) and the
-Campaign (15); nothing depends on the order within the Events phase, but the
-Contact link in the Orders phase (18) relies on Accounts being committed by an
-earlier phase, which they are.
+Campaign (15). The Contact link in the Orders phase (18) relies on Accounts
+being committed by the earlier Events phase, which they are.
 
-### Semantics (documented in CONFIGURATION.md and FIELD-MAPPING.md)
+**Object mapping `Order_to_PersonAccount`** ("Order to Person Account
+(optional)"): Source Resource `Order`, Target `Account`, External Id Field
+`Humanitix_Contact_Key__pc`, Match Strategy `MatchByFields`, Match Field Set
+`PersonEmail`, Update Mode `BlanksOnly`, Load Order 18, Is Active false.
+Description: "OPTIONAL: buyer becomes a Person Account, matched by email with
+blanks-only updates. Turned on by Contact account = Person account on the Sync
+Settings tab, which turns Order_to_Contact off. Needs Person Accounts enabled."
+
+| Field mapping | Source Path | Target Field | Data Type | Transform | Default Value |
+| --- | --- | --- | --- | --- | --- |
+| `Order_to_PersonAccount_01` | `email` | `Humanitix_Contact_Key__pc` (external id) | Text | Lower | |
+| `Order_to_PersonAccount_02` | `firstName` | `FirstName` | Text | None | |
+| `Order_to_PersonAccount_03` | `lastName` | `LastName` | Text | None | `Unknown` |
+| `Order_to_PersonAccount_04` | `email` | `PersonEmail` | Email | Lower | |
+| `Order_to_PersonAccount_05` | `mobile` | `PersonMobilePhone` | Phone | None | |
+| `Order_to_PersonAccount_06` | `organisation` | `Humanitix_Organisation__pc` | Text | None | |
+| `Order_to_PersonAccount_07` | `_id` | `Humanitix_Last_Order_Id__pc` | Text | None | |
+| `Order_to_PersonAccount_08` | *(none)* | `RecordTypeId` | Text | None | *(set on save, see below)* |
+
+The `__pc` fields are the Person Account view of the packaged Contact fields;
+Salesforce creates them automatically when Person Accounts are enabled, so the
+package ships no new field for them.
+
+The existing Campaign Member and staging Order mappings keep working unchanged:
+both resolve the buyer through `Contact.Humanitix_Contact_Key__c`, and a Person
+Account's person contact is a Contact record carrying that value.
+
+### Mapping states per choice
+
+Saving a Contact account value sets these `Is_Active__c` values. Only records
+whose state actually changes are deployed.
+
+| Record | None | Event account | Person account |
+| --- | --- | --- | --- |
+| `Order_to_Contact` | on | on | **off** |
+| `Order_to_Contact_08` (AccountId) | off | **on** | off |
+| `Event_to_Account` | off | **on** | off |
+| `Order_to_PersonAccount` | off | off | **on** |
+
+The effective value shown on the tab is derived from the same records:
+Person account when `Order_to_PersonAccount` is active and `Order_to_Contact`
+is not; Event account when `Event_to_Account` is active; None when none of
+those three are active and `Order_to_Contact` is. Any other combination (made
+on the Mappings tab or in Setup) shows as `Custom` with the notice "These
+mappings were changed on the Mappings tab. Choose an option and save to apply
+it." Saving any option then normalises the four records to the table above.
+
+### Event account semantics (documented)
 
 - One Account per synced event, respecting Event Selection.
 - The Contact link follows the Order to Contact mapping's Update Mode. Under
   the shipped `BlanksOnly`, only Contacts with no Account are linked: new buyers
   join the event Account and existing records are untouched. Under `Always` the
   latest order's event wins. Under `Never` only newly created Contacts get it.
-- NPSP orgs: a Contact inserted with an Account already set does not get a
-  Household Account.
+- NPSP orgs: a new Contact linked to an event Account does not get a Household
+  Account.
 - Leads have no Account; the Lead mapping is untouched.
 - The Account name prefix is changed by editing the Template Transform Arg on
   the Mappings tab; there is no separate setting.
 
-### Toggle on the Sync Settings tab
+### Person account semantics (documented)
 
-- `lightning-input type="toggle"` labelled "Create an Account per event", help
-  text: "Creates one Account per synced event, named Humanitix - Event Name,
-  and links new Contacts to it. This switches the Event to Account mapping and
-  the Contact AccountId field mapping (Order_to_Contact_08) on or off. The
-  Mappings tab shows the same records."
-- `SettingsDto.accountPerEvent` reflects the effective `Is_Active__c` of
-  `Event_to_Account`: the org record when the org has mapping records, else the
-  shipped default. An org that has mapping records but no `Event_to_Account`
-  record yet (upgraded, seed not landed) reads as false.
-- On save, `saveSyncSettings` compares `dto.accountPerEvent` with that effective
-  state. When they differ it builds a `PendingChanges` holding the
-  `Event_to_Account` object mapping and the `Order_to_Contact_08` field mapping,
-  each with `active` set to the toggle's value and every other field copied from
-  the effective record, and appends
-  `HumanitixMappingAdminController.deployRecordsFor(pending)` (a new public
-  method that validates the candidate configuration and returns the records to
-  deploy, including missing shipped defaults) to the sync setting record. The
-  result is one `HumanitixMetadataWriter.deploy(records, 'Sync Settings')` call,
-  polled by the tab exactly as today. A validation failure surfaces as an
-  `AuraHandledException` before anything is deployed.
-- If an admin has customised the pair (for example the object mapping active
-  and the field mapping inactive), the toggle shows the object mapping's state;
-  saving with the toggle unchanged touches neither record, saving it Off
-  deactivates both, saving it On activates both.
+- Available only when Person Accounts are enabled, detected by
+  `Schema.SObjectType.Account.fields.getMap().containsKey('ispersonaccount')`.
+  In other orgs the option is shown disabled with an explanation.
+- Record type: the save resolves the person record type to use. The tab lists
+  the active Account record types where `IsPersonType = true` that the running
+  user can use; with exactly one it is chosen silently, with several the admin
+  picks one from a combobox shown under the radio group. The save writes its Id
+  as the Default Value of `Order_to_PersonAccount_08` (a constant: no Source
+  Path), alongside the activation. Choosing Person account with no person record
+  type available is a validation error.
+- Switching to Person account does not convert existing Contacts. A buyer who
+  already exists as a business Contact gets a new Person Account, because the
+  match runs on `PersonEmail`. The tab warns about this before saving.
+- Switching away from Person account leaves existing Person Accounts in place;
+  new buyers become Contacts again.
+
+### Contact account control on the Sync Settings tab
+
+A `lightning-radio-group` labelled **Contact account**, placed under Sync
+Events, with field-level help "Which Account each Humanitix buyer is linked to
+in Salesforce." Each option has a help line rendered under the group for the
+selected value (copy is final; no em dashes):
+
+- **None (org default):** "Buyers are created as Contacts with no Account set
+  by the connector. In NPSP orgs, NPSP then creates a Household Account for each
+  new Contact automatically. Choose this if you use NPSP households."
+- **Event account:** "Creates one Account per synced event, named Humanitix -
+  Event Name, and links buyers who do not have an Account yet to it. In NPSP
+  orgs, these Contacts do not get a Household Account."
+- **Person account:** "Creates each buyer as a Person Account instead of a
+  Contact, matched by email. Existing Contacts are not converted, so a buyer
+  who is already a Contact gets a new Person Account."
+- Person account disabled note: "Person Accounts are not enabled in this org.
+  Salesforce Support can enable them, and that change cannot be undone."
+- Footer, always shown: "This switches the mappings listed on the Mappings
+  tab. Changes there show here as Custom."
+
+Data contract:
+
+- `SettingsDto` gains `contactAccount` (`None` | `EventAccount` |
+  `PersonAccount` | `Custom` on read), `personAccountsEnabled` (Boolean),
+  `personRecordTypes` (list of `{ value: Id, label }`) and
+  `personRecordTypeId` (the current Default Value of
+  `Order_to_PersonAccount_08`, or the single available one).
+- On save, `contactAccount = Custom` means "leave the mapping records alone".
+  Any other value is compared with the effective state; when it differs, or
+  Person account is chosen with a different record type, `saveSyncSettings`
+  builds a `PendingChanges` holding the affected records, each copied from the
+  effective record with `active` (and, for `_08`, the Default Value) changed,
+  and appends `HumanitixMappingAdminController.deployRecordsFor(pending)` (a new
+  public method that validates the candidate configuration and returns the
+  records to deploy, including missing shipped defaults) to the sync setting
+  record. The result is one `HumanitixMetadataWriter.deploy(records, 'Sync
+  Settings')` call, polled by the tab exactly as today. A validation failure
+  surfaces as an `AuraHandledException` before anything is deployed.
 
 ### Seeding newly shipped defaults on upgrade
 
@@ -277,7 +373,7 @@ returns on upgrade is not currently true. Two changes:
    missing shipped defaults (flagged `fromDefaults`) onto the org's records in
    every org, not only unseeded ones, so the Mappings tab lists them,
    validation knows the new parents, and `deployRecords` always includes them.
-   A mapping save or a toggle save therefore works even seconds after an
+   A mapping save or a Contact account save therefore works even seconds after an
    upgrade, before the asynchronous seed has landed; the seeder's merge
    semantics make the two deploys idempotent.
 
@@ -286,12 +382,13 @@ returns on upgrade is not currently true. Two changes:
 - **CONFIGURATION.md:** a Sync Events section replaces the Future events only
   bullet (modes, picker, edge semantics, and the In Future Only row in the
   settings table marked as superseded but honoured when Event Selection is
-  blank); a new Account per event section with the Update Mode and NPSP notes.
+  blank); a new Contact account section with the three options, the mapping
+  state table, and the Update Mode, NPSP and Person Account notes.
 - **FIELD-MAPPING.md:** `Template` in the transforms list; the two new shipped
   inactive mappings in "What ships by default"; an upgrade note that the new
   records arrive inactive on the first Setup tab load after upgrading.
 - **README.md:** feature list and comparison table rows for event selection
-  and Account per event.
+  and the Contact account choice.
 - **ARCHITECTURE.md:** one line on the Selected filter in the Events phase and
   the filtered keyset in Orders and Tickets.
 - **Roadmap spec** (`2026-07-30-connector-improvement-roadmap-design.md`):
@@ -314,9 +411,12 @@ returns on upgrade is not currently true. Two changes:
   and Tickets iterate only selected events; `nextEventId` overload.
 - `HumanitixSyncSettingsControllerTest`: DTO round trip for the new fields;
   every validation rule; `fetchHumanitixEvents` against `HumanitixCalloutMock`
-  for a page, a last page and a 401; `accountPerEvent` reflects the effective
-  state; a toggle change appends both mapping records to the deploy and an
-  unchanged toggle appends nothing.
+  for a page, a last page and a 401; `contactAccount` is derived correctly
+  for every row of the mapping state table and reads Custom otherwise; each
+  transition deploys exactly the records whose state changes; an unchanged or
+  Custom value deploys no mapping record; Person account without Person
+  Accounts or without a person record type is rejected; the chosen record type
+  lands as the Default Value of `Order_to_PersonAccount_08`.
 - `HumanitixTypeCoercerTest` and `HumanitixMappingConfigTest`: Template
   substitution, null pass-through, and validation of a missing `{value}`.
 - `HumanitixDefaultMappingsTest`: the three new records exist, inactive, with
@@ -329,16 +429,32 @@ returns on upgrade is not currently true. Two changes:
 
 - `humanitixSetupSyncSettings`: the radio group replaces the checkbox; the
   picker appears only for Selected; Save is disabled for an empty selection;
-  the DTO carries `eventSelection`, `selectedEventIds` and `accountPerEvent`.
+  the DTO carries `eventSelection`, `selectedEventIds` and `contactAccount`;
+  the Contact account help line follows the selected option; Person account is
+  disabled with its note when `personAccountsEnabled` is false; the record type
+  combobox appears only with several person record types; Custom shows its
+  notice.
 - `humanitixEventPicker`: page loop until the last page and at the cap;
   search; select and remove via table and pills; unknown-id pills; fetch
   failure with Refresh; `change` events.
 
 **Scratch-org walkthrough** with the demo Humanitix account before building the
 package version: pick events live, run a Selected sync and confirm unselected
-events create nothing, flip the Account toggle and confirm the Account and the
-Contact link, then upgrade a scratch org from 1.2.0-1 and confirm the three new
+events create nothing, switch Contact account to Event account and confirm the
+Account and the Contact link, then repeat with Person account in a scratch org
+with the `PersonAccounts` feature, then upgrade a scratch org from 1.2.0-1 and confirm the three new
 records arrive inactive with no settings change.
+
+## Milestones
+
+| # | Scope | Ships in |
+| --- | --- | --- |
+| M1 | Event selection: config, engine filter, picker, Sync Settings radio | 1.3.0 |
+| M2 | Seeder fix, Template transform, Event account, Contact account radio with None and Event account | 1.3.0 |
+| M3 | Person account: mapping, detection, record type choice, Person account option | 1.3.0 if done before the build, otherwise 1.4.0 |
+
+Each milestone leaves the branch releasable. Until M3 lands, the Person
+account option is not rendered.
 
 ## Packaging and migration
 
@@ -351,11 +467,11 @@ records arrive inactive with no settings change.
   class would be added to the admin permission set and to `ADMIN_APEX_CLASSES`
   in the metadata generator in the same commit; this design adds none.
 - **Kaipatiki:** install the new version, open the Humanitix Setup tab once
-  (seeds `Event_to_Account`, its two field mappings and `Order_to_Contact_08`,
-  all inactive), verify by SOQL. Event Selection stays blank, so behaviour is
+  (seeds `Event_to_Account`, `Order_to_PersonAccount`, their field mappings
+  and `Order_to_Contact_08`, all inactive), verify by SOQL. Event Selection stays blank, so behaviour is
   identical until an admin chooses otherwise.
 - **Demo org for Humanitix:** set Selected with a few events and turn the
-  Account toggle on, so the walkthrough shows both features.
+  Contact account to Event account, so the walkthrough shows both features.
 
 ## Out of scope (recorded for later)
 
@@ -363,6 +479,8 @@ records arrive inactive with no settings change.
   Settings tab.
 - Per-event `Sync_Enabled__c` checkbox on `Humanitix_Event__c` and catalog
   rows for unselected events (roadmap sketch, superseded).
+- Connector-built Household Accounts for orgs without NPSP.
+- Converting existing Contacts to Person Accounts.
 - A UI setting for the Account name prefix.
 - Linking Campaigns or Orders to the event Account.
 - Lean mode (roadmap feature 2) and the revenue layer (feature 4).
@@ -372,9 +490,15 @@ records arrive inactive with no settings change.
 - An admin can choose All, Future only or Selected, pick events by name from a
   live Humanitix list, save, and the next run syncs only those events, with
   nothing created for the others.
-- The Account toggle creates one `Humanitix - <Event Name>` Account per synced
+- Contact account = Event account creates one `Humanitix - <Event Name>` Account per synced
   event and links new Contacts to it, without touching existing Contacts under
   the shipped BlanksOnly mode.
+- Contact account = None keeps today's behaviour, so NPSP keeps creating
+  Household Accounts.
+- Contact account = Person account, in an org with Person Accounts, creates
+  buyers as Person Accounts matched by email, and Campaign Members still link
+  them to the event Campaign.
+- Each option's help text explains its effect in the tab itself.
 - Kaipatiki upgrades with identical behaviour and the new records arrive
   inactive.
 - All Apex and Jest tests pass in both the seeded and the bare org; coverage
