@@ -122,6 +122,7 @@ export default class HumanitixEventPicker extends LightningElement {
   }
 
   handleSearch(event) {
+    event.stopPropagation();
     this.searchTerm = event.target.value;
   }
 

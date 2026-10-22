@@ -52,15 +52,26 @@
           </p>
         </div>
 
-        <lightning-input
-          type="checkbox"
-          label="Future events only"
-          field-level-help="Skip events that already finished."
-          checked={inFutureOnly}
-          disabled={isSaving}
-          onchange={handleInFutureOnlyChange}
-          class="slds-m-bottom_small"
-        ></lightning-input>
+        <div class="slds-m-bottom_small">
+          <lightning-radio-group
+            label="Sync Events"
+            field-level-help="Which Humanitix events are synced to Salesforce."
+            options={syncEventsOptions}
+            value={eventSelection}
+            disabled={isSaving}
+            onchange={handleSyncEventsChange}
+          ></lightning-radio-group>
+          <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">{syncEventsHelp}</p>
+          <template lwc:if={showEventPicker}>
+            <div class="slds-m-top_small">
+              <c-humanitix-event-picker
+                selected-ids={selectedEventIds}
+                disabled={isSaving}
+                onchange={handleSelectedEventsChange}
+              ></c-humanitix-event-picker>
+            </div>
+          </template>
+        </div>
 
         <lightning-input
           type="text"
@@ -121,8 +132,11 @@
             variant="brand"
             label="Save Settings"
             onclick={handleSave}
-            disabled={isSaving}
+            disabled={saveDisabled}
           ></lightning-button>
+          <template lwc:if={selectionMissing}>
+            <p class="slds-text-body_small slds-text-color_error slds-m-top_x-small">Select at least one event to save.</p>
+          </template>
           <template lwc:if={isSaving}>
             <lightning-spinner alternative-text="Saving settings" size="small"></lightning-spinner>
           </template>

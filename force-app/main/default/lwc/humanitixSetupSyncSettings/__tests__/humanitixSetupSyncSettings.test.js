@@ -5,6 +5,7 @@ import saveSyncSettings from '@salesforce/apex/HumanitixSyncSettingsController.s
 import getSyncEnabled from '@salesforce/apex/HumanitixSyncSettingsController.getSyncEnabled';
 import setSyncEnabled from '@salesforce/apex/HumanitixSyncSettingsController.setSyncEnabled';
 import getDeployStatus from '@salesforce/apex/HumanitixMetadataWriter.getDeployStatus';
+import fetchHumanitixEvents from '@salesforce/apex/HumanitixSyncSettingsController.fetchHumanitixEvents';
 
 jest.mock(
   '@salesforce/apex/HumanitixSyncSettingsController.getSyncSettings',
@@ -27,6 +28,11 @@ jest.mock(
   { virtual: true }
 );
 jest.mock(
+  '@salesforce/apex/HumanitixSyncSettingsController.fetchHumanitixEvents',
+  () => ({ default: jest.fn() }),
+  { virtual: true }
+);
+jest.mock(
   '@salesforce/apex/HumanitixMetadataWriter.getDeployStatus',
   () => ({ default: jest.fn() }),
   { virtual: true }
@@ -35,7 +41,8 @@ jest.mock(
 const SETTINGS = {
   pageSize: 100,
   enabledResources: ['Tags', 'Events'],
-  inFutureOnly: true,
+  eventSelection: 'FutureOnly',
+  selectedEventIds: [],
   ticketStatusFilter: 'complete',
   maxRetries: 5,
   retryDelayMinutes: 5,
@@ -79,6 +86,14 @@ function checkboxGroup(element) {
   return element.shadowRoot.querySelector('lightning-checkbox-group');
 }
 
+function radioGroup(element, label) {
+  return byLabel(element, 'lightning-radio-group', label);
+}
+
+function picker(element) {
+  return element.shadowRoot.querySelector('c-humanitix-event-picker');
+}
+
 function combobox(element) {
   return element.shadowRoot.querySelector('lightning-combobox');
 }
@@ -117,6 +132,7 @@ describe('c-humanitix-setup-sync-settings', () => {
     setSyncEnabled.mockResolvedValue(undefined);
     saveSyncSettings.mockResolvedValue(null);
     getDeployStatus.mockResolvedValue(null);
+    fetchHumanitixEvents.mockResolvedValue({ page: 1, hasNextPage: false, events: [] });
   });
 
   afterEach(() => {
@@ -136,7 +152,9 @@ describe('c-humanitix-setup-sync-settings', () => {
     expect(inputByLabel(element, 'Sync Enabled').checked).toBe(true);
     expect(inputByLabel(element, 'Page Size').value).toBe(100);
     expect(checkboxGroup(element).value).toEqual(['Tags', 'Events']);
-    expect(inputByLabel(element, 'Future events only').checked).toBe(true);
+    expect(radioGroup(element, 'Sync Events').value).toBe('FutureOnly');
+    expect(text(element)).toContain('Only events that have not ended yet are synced.');
+    expect(picker(element)).toBeNull();
     expect(inputByLabel(element, 'Ticket Status Filter').value).toBe('complete');
     expect(inputByLabel(element, 'Max Retries').value).toBe(5);
     expect(inputByLabel(element, 'Retry Delay Minutes').value).toBe(5);
@@ -203,7 +221,9 @@ describe('c-humanitix-setup-sync-settings', () => {
     expect(dto.pageSize).toBe(250);
     expect(dto.enabledResources).toEqual(['Tags', 'Events', 'Orders', 'Tickets']);
     expect(dto.ticketStatusFilter).toBeNull();
-    expect(dto.inFutureOnly).toBe(true);
+    expect(dto.eventSelection).toBe('FutureOnly');
+    expect(dto.selectedEventIds).toEqual([]);
+    expect(dto).not.toHaveProperty('inFutureOnly');
     expect(dto.maxRetries).toBe(5);
     expect(dto.retryDelayMinutes).toBe(5);
     expect(dto.sinceMode).toBe('FullPull');
@@ -277,5 +297,56 @@ describe('c-humanitix-setup-sync-settings', () => {
     expect(getSyncSettings).toHaveBeenCalledTimes(1);
     expect(buttonByLabel(element, 'Save Settings').disabled).toBe(false);
     expect(element.shadowRoot.querySelector('.slds-theme_error')).toBeNull();
+  });
+
+  it('shows the picker only for Selected and blocks saving an empty selection', async () => {
+    const element = await createAndLoad();
+
+    const group = radioGroup(element, 'Sync Events');
+    group.value = 'Selected';
+    group.dispatchEvent(new CustomEvent('change', { detail: { value: 'Selected' } }));
+    await settle();
+
+    expect(picker(element)).not.toBeNull();
+    expect(text(element)).toContain('Only the events you pick below are synced.');
+    expect(text(element)).toContain('Select at least one event to save.');
+    expect(buttonByLabel(element, 'Save Settings').disabled).toBe(true);
+
+    picker(element).dispatchEvent(
+      new CustomEvent('change', { detail: { selectedIds: ['evt_1', 'evt_2'] } })
+    );
+    await settle();
+
+    expect(buttonByLabel(element, 'Save Settings').disabled).toBe(false);
+    await save(element);
+    const dto = JSON.parse(saveSyncSettings.mock.calls[0][0].settingsJson);
+    expect(dto.eventSelection).toBe('Selected');
+    expect(dto.selectedEventIds).toEqual(['evt_1', 'evt_2']);
+  });
+
+  it('passes the saved selection to the picker', async () => {
+    getSyncSettings.mockResolvedValue({
+      ...SETTINGS,
+      eventSelection: 'Selected',
+      selectedEventIds: ['evt_9']
+    });
+
+    const element = await createAndLoad();
+
+    expect(picker(element).selectedIds).toEqual(['evt_9']);
+  });
+
+  it('ignores a change event that carries no selection', async () => {
+    getSyncSettings.mockResolvedValue({
+      ...SETTINGS,
+      eventSelection: 'Selected',
+      selectedEventIds: ['evt_9']
+    });
+    const element = await createAndLoad();
+
+    picker(element).dispatchEvent(new CustomEvent('change', { detail: { value: 'abc' } }));
+    await settle();
+
+    expect(picker(element).selectedIds).toEqual(['evt_9']);
   });
 });
