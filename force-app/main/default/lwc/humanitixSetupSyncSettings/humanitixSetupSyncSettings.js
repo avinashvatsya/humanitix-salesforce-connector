@@ -36,10 +36,16 @@ const CONTACT_ACCOUNT_OPTIONS = [
   { label: 'Event account', value: 'EventAccount' }
 ];
 
+const PERSON_ACCOUNT_OPTION = { label: 'Person account', value: 'PersonAccount' };
+const PERSON_ACCOUNTS_OFF =
+  'Person account: Person Accounts are not enabled in this org. Salesforce Support can enable them, and that change cannot be undone.';
+
 const CONTACT_ACCOUNT_HELP = {
   None: 'Buyers are created as Contacts with no Account set by the connector. In NPSP orgs, NPSP then creates a Household Account for each new Contact automatically. Choose this if you use NPSP households.',
   EventAccount:
     'Creates one Account per synced event, named Humanitix - Event Name, and links buyers who do not have an Account yet to it. In NPSP orgs, these Contacts do not get a Household Account.',
+  PersonAccount:
+    'Creates each buyer as a Person Account instead of a Contact, matched by email. Existing Contacts are not converted, so a buyer who is already a Contact gets a new Person Account.',
   Custom: 'These mappings were changed on the Mappings tab. Choose an option and save to apply it.'
 };
 
@@ -86,6 +92,9 @@ export default class HumanitixSetupSyncSettings extends LightningElement {
   enabledResources = [];
   eventSelection = 'All';
   contactAccount = 'None';
+  personAccountsEnabled = false;
+  personRecordTypes = [];
+  personRecordTypeId = null;
   selectedEventIds = [];
   ticketStatusFilter = '';
   maxRetries;
@@ -131,6 +140,9 @@ export default class HumanitixSetupSyncSettings extends LightningElement {
         : [];
       this.eventSelection = settings.eventSelection || 'All';
       this.contactAccount = settings.contactAccount || 'None';
+      this.personAccountsEnabled = settings.personAccountsEnabled === true;
+      this.personRecordTypes = Array.isArray(settings.personRecordTypes) ? settings.personRecordTypes : [];
+      this.personRecordTypeId = settings.personRecordTypeId || null;
       this.selectedEventIds = Array.isArray(settings.selectedEventIds)
         ? [...settings.selectedEventIds]
         : [];
@@ -193,7 +205,21 @@ export default class HumanitixSetupSyncSettings extends LightningElement {
   }
 
   get contactAccountOptions() {
-    return CONTACT_ACCOUNT_OPTIONS;
+    return this.personAccountsEnabled
+      ? [...CONTACT_ACCOUNT_OPTIONS, PERSON_ACCOUNT_OPTION]
+      : CONTACT_ACCOUNT_OPTIONS;
+  }
+
+  get personAccountsOffNote() {
+    return this.personAccountsEnabled ? '' : PERSON_ACCOUNTS_OFF;
+  }
+
+  get showPersonRecordType() {
+    return this.contactAccount === 'PersonAccount' && this.personRecordTypes.length > 1;
+  }
+
+  handlePersonRecordTypeChange(event) {
+    this.personRecordTypeId = event.detail ? event.detail.value : event.target.value;
   }
 
   get contactAccountHelp() {
@@ -250,6 +276,7 @@ export default class HumanitixSetupSyncSettings extends LightningElement {
       eventSelection: this.eventSelection,
       selectedEventIds: [...this.selectedEventIds],
       contactAccount: this.contactAccount,
+      personRecordTypeId: this.personRecordTypeId,
       ticketStatusFilter: blankToNull(this.ticketStatusFilter),
       maxRetries: this.maxRetries,
       retryDelayMinutes: this.retryDelayMinutes,
