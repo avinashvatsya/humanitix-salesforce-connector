@@ -37,6 +37,16 @@ public with sharing class HumanitixSyncLauncher {
             throw new LaunchException('No resources are enabled for sync (Humanitix Sync Setting > Enabled Resources).');
         }
 
+        String eventSelection = HumanitixSyncConfig.eventSelection();
+        List<String> selectedIds = eventSelection == HumanitixSyncConfig.SELECTION_SELECTED
+            ? HumanitixSyncConfig.selectedEventIds()
+            : new List<String>();
+        if (eventSelection == HumanitixSyncConfig.SELECTION_SELECTED && selectedIds.isEmpty()) {
+            throw new LaunchException(
+                'Event Selection is Selected but no events are selected (Humanitix Sync Setting > Selected Event Ids).'
+            );
+        }
+
         Datetime runStart = Datetime.now();
         String runId =
             triggerSource + '-' + String.valueOf(runStart.getTime()) + '-' + String.valueOf(Math.abs(Crypto.getRandomLong()));
@@ -53,6 +63,8 @@ public with sharing class HumanitixSyncLauncher {
         st.attempt = 0;
         st.pageSize = HumanitixSyncConfig.pageSize();
         st.inFutureOnly = HumanitixSyncConfig.inFutureOnly();
+        st.eventSelection = eventSelection;
+        st.selectedEventIds = selectedIds;
         st.ticketStatusFilter = HumanitixSyncConfig.ticketStatusFilter();
         st.maxRetries = HumanitixSyncConfig.maxRetries();
         st.retryDelayMinutes = HumanitixSyncConfig.retryDelayMinutes();

@@ -124,4 +124,45 @@ private class HumanitixSyncLauncherTest {
         System.assertEquals(false, HumanitixSyncLauncher.lastState.incremental, 'Daily full job must run full');
         System.assertEquals(1, [SELECT COUNT() FROM Humanitix_Sync_Log__c WHERE Trigger_Source__c = 'Scheduled']);
     }
+
+    @IsTest
+    static void selectedModeSnapshotsTheIds() {
+        HumanitixSyncConfig.overrideSetting = new Humanitix_Sync_Setting__mdt(
+            Event_Selection__c = 'Selected',
+            Selected_Event_Ids__c = 'evt_1,evt_2',
+            In_Future_Only__c = true
+        );
+        Test.startTest();
+        HumanitixSyncLauncher.start('Manual');
+        Test.stopTest();
+        HumanitixSyncState st = HumanitixSyncLauncher.lastState;
+        System.assertEquals('Selected', st.eventSelection);
+        System.assertEquals(new List<String>{ 'evt_1', 'evt_2' }, st.selectedEventIds);
+        System.assertEquals(false, st.inFutureOnly, 'Selected mode never sends inFutureOnly');
+    }
+
+    @IsTest
+    static void futureOnlyModeSetsInFutureOnly() {
+        HumanitixSyncConfig.overrideSetting = new Humanitix_Sync_Setting__mdt(Event_Selection__c = 'FutureOnly');
+        Test.startTest();
+        HumanitixSyncLauncher.start('Manual');
+        Test.stopTest();
+        System.assertEquals('FutureOnly', HumanitixSyncLauncher.lastState.eventSelection);
+        System.assertEquals(true, HumanitixSyncLauncher.lastState.inFutureOnly);
+        System.assertEquals(new List<String>(), HumanitixSyncLauncher.lastState.selectedEventIds);
+    }
+
+    @IsTest
+    static void selectedModeWithNoIdsRefusesToStart() {
+        HumanitixSyncConfig.overrideSetting = new Humanitix_Sync_Setting__mdt(Event_Selection__c = 'Selected');
+        Test.startTest();
+        try {
+            HumanitixSyncLauncher.start('Manual');
+            System.assert(false, 'expected LaunchException');
+        } catch (HumanitixSyncLauncher.LaunchException e) {
+            System.assert(e.getMessage().startsWith('Event Selection is Selected but no events are selected'), e.getMessage());
+        }
+        Test.stopTest();
+        System.assertEquals(0, [SELECT COUNT() FROM Humanitix_Sync_Log__c], 'No run log may be created');
+    }
 }
