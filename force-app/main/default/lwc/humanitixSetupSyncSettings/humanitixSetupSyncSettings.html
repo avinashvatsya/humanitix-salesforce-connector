@@ -73,6 +73,21 @@
           </template>
         </div>
 
+        <div class="slds-m-bottom_small">
+          <lightning-radio-group
+            label="Contact account"
+            field-level-help="Which Account each Humanitix buyer is linked to in Salesforce."
+            options={contactAccountOptions}
+            value={contactAccount}
+            disabled={isSaving}
+            onchange={handleContactAccountChange}
+          ></lightning-radio-group>
+          <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">{contactAccountHelp}</p>
+          <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+            This switches the mappings listed on the Mappings tab. Changes there show here as Custom.
+          </p>
+        </div>
+
         <lightning-input
           type="text"
           label="Ticket Status Filter"
