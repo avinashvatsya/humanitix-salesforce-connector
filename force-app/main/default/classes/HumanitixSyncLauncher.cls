@@ -27,6 +27,21 @@ public with sharing class HumanitixSyncLauncher {
         if (!HumanitixSyncConfig.syncEnabled()) {
             throw new LaunchException('Humanitix sync is disabled (Humanitix Sync Toggle > Sync Enabled).');
         }
+        // A known-missing key would only fail on the first callout. Scheduled and
+        // Flow callers catch LaunchException, so their Failed run log commits and
+        // the reason is visible; a manual run shows the sentence in its toast.
+        HumanitixCredentialService.KeyStatus key = HumanitixCredentialService.getKeyStatus();
+        if (key != null && key.statusKnown == true && key.keySaved != true) {
+            Datetime failedAt = Datetime.now();
+            Humanitix_Sync_Log__c failed = HumanitixSyncLogService.start(
+                triggerSource + '-' + String.valueOf(failedAt.getTime()) + '-' + String.valueOf(Math.abs(Crypto.getRandomLong())),
+                triggerSource,
+                String.join(HumanitixSyncConfig.enabledResources(), ',')
+            );
+            HumanitixSyncLogService.addEntry(failed.Id, null, null, 'Failed', 0, 0, 0, null, 0, HumanitixSyncMessages.MISSING_KEY);
+            HumanitixSyncLogService.finalizeRun(failed.Id);
+            throw new LaunchException(HumanitixSyncMessages.MISSING_KEY);
+        }
         // Overlap guard: don't stack runs. A Running log older than 6h is treated as
         // stale (a crashed run) and does not block.
         if (HumanitixSyncLogService.hasRunningSince(Datetime.now().addHours(-6))) {
