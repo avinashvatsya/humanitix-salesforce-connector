@@ -1,0 +1,43 @@
+<template>
+  <lightning-card title="Ready to sync" icon-name="standard:task2">
+    <lightning-button
+      slot="actions"
+      label="Refresh"
+      icon-name="utility:refresh"
+      onclick={handleRefresh}
+      disabled={isLoading}
+    ></lightning-button>
+
+    <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+      <template lwc:if={isLoading}>
+        <lightning-spinner alternative-text="Checking the setup" size="small"></lightning-spinner>
+      </template>
+      <template lwc:if={loadError}>
+        <p class="load-error slds-text-color_error">{loadError}</p>
+      </template>
+      <template lwc:elseif={hasItems}>
+        <p class="summary slds-m-bottom_small">{summary}</p>
+        <ul class="slds-has-dividers_bottom-space">
+          <template for:each={items} for:item="item">
+            <li key={item.key} class="checklist-item slds-item" data-key={item.key} data-status={item.status}>
+              <div class="slds-media slds-media_center">
+                <div class="slds-media__figure">
+                  <lightning-icon
+                    icon-name={item.iconName}
+                    variant={item.iconVariant}
+                    size="x-small"
+                    alternative-text={item.statusText}
+                  ></lightning-icon>
+                </div>
+                <div class="slds-media__body">
+                  <p class="slds-text-title_bold">{item.label}</p>
+                  <p class="item-message">{item.message}</p>
+                </div>
+              </div>
+            </li>
+          </template>
+        </ul>
+      </template>
+    </div>
+  </lightning-card>
+</template>

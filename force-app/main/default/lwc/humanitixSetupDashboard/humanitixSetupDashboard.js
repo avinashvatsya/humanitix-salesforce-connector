@@ -24,7 +24,8 @@ const COLUMNS = [
   },
   { label: 'Processed', fieldName: 'Total_Records_Processed__c', type: 'number' },
   { label: 'Failed', fieldName: 'Total_Records_Failed__c', type: 'number' },
-  { label: 'Errors', fieldName: 'Total_Errors__c', type: 'number' }
+  { label: 'Errors', fieldName: 'Total_Errors__c', type: 'number' },
+  { label: 'Reason', fieldName: 'Error_Summary__c', wrapText: true }
 ];
 
 export default class HumanitixSetupDashboard extends LightningElement {
