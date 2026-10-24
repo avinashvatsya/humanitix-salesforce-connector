@@ -37,7 +37,7 @@ ADMIN_APEX_CLASSES = [
     "HumanitixCredentialService", "HumanitixConnectionController",
     "HumanitixMetadataWriter", "HumanitixSyncSettingsController",
     "HumanitixScheduleController", "HumanitixMappingAdminController",
-    "HumanitixContactAccountService",
+    "HumanitixContactAccountService", "HumanitixSyncMessages", "HumanitixReadinessService",
 ]
 ADMIN_TABS = ["Humanitix_Sync_Log__c", "Humanitix_Setup"]
 USER_TABS = ["Humanitix_Sync_Log__c"]
