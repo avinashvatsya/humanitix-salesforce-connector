@@ -112,6 +112,14 @@
         <apexClass>HumanitixContactAccountService</apexClass>
         <enabled>true</enabled>
     </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixSyncMessages</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>HumanitixReadinessService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
     <description>Full access to configure and run the Humanitix connector. Assigning this activates the API callout principal.</description>
     <externalCredentialPrincipalAccesses>
         <externalCredentialPrincipal>HumanitixAPI-Humanitix_Named_Principal</externalCredentialPrincipal>

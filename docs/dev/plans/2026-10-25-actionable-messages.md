@@ -361,9 +361,12 @@ add `Error_Summary__c = summarize(logId)` to the `update new Humanitix_Sync_Log_
 
         Test.startTest();
         HumanitixSyncQueueable.StepOutcome oc = q.runStep();
+        // Tickets starts its own keyset; the archived event is no longer in it.
+        HumanitixSyncQueueable.StepOutcome next = q.runStep();
         Test.stopTest();
 
-        System.assertEquals(HumanitixSyncQueueable.StepOutcome.DONE, oc, 'the archived event is not iterated again by Tickets');
+        System.assertEquals(HumanitixSyncQueueable.StepOutcome.PROCEED, oc);
+        System.assertEquals(HumanitixSyncQueueable.StepOutcome.DONE, next, 'the archived event is not iterated again by Tickets');
         Humanitix_Sync_Log_Entry__c entry = [SELECT Status__c, Http_Status__c, Error_Message__c FROM Humanitix_Sync_Log_Entry__c];
         System.assertEquals('Skipped', entry.Status__c);
         System.assert(entry.Error_Message__c.startsWith(HumanitixSyncMessages.eventNotFound()), entry.Error_Message__c);
