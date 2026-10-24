@@ -44,11 +44,21 @@ public with sharing class HumanitixSyncAdminController {
         }
     }
 
+    /** The Dashboard "Ready to sync" checklist. Not cacheable: it includes a live connection check. */
+    @AuraEnabled
+    public static List<HumanitixReadinessService.Item> getReadiness() {
+        try {
+            return HumanitixReadinessService.check();
+        } catch (Exception e) {
+            throw new AuraHandledException(e.getMessage());
+        }
+    }
+
     @AuraEnabled(cacheable=true)
     public static List<Humanitix_Sync_Log__c> getRecentRuns() {
         return [
             SELECT Id, Name, Status__c, Trigger_Source__c, Started_At__c, Finished_At__c,
-                Total_Records_Processed__c, Total_Records_Failed__c, Total_Errors__c
+                Total_Records_Processed__c, Total_Records_Failed__c, Total_Errors__c, Error_Summary__c
             FROM Humanitix_Sync_Log__c
             ORDER BY Started_At__c DESC NULLS LAST
             LIMIT 25

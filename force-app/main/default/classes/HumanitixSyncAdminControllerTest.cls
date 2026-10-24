@@ -52,4 +52,12 @@ private class HumanitixSyncAdminControllerTest {
         System.assert(runs.size() >= 1);
         System.assertEquals(true, enabled);
     }
+
+    @IsTest
+    static void getReadinessReturnsTheChecklist() {
+        Test.startTest();
+        List<HumanitixReadinessService.Item> items = HumanitixSyncAdminController.getReadiness();
+        Test.stopTest();
+        System.assertEquals(5, items.size());
+    }
 }
