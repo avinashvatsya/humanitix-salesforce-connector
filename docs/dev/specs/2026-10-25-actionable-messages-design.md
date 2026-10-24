@@ -139,7 +139,7 @@ ordered by `CreatedDate, Id`, and build `Error_Summary__c`:
   and was skipped.` / `N events no longer exist in Humanitix and were
   skipped.`
 
-Distinct sentences in first-seen order, joined with a space, abbreviated to
+Distinct sentences in first-seen order (the skipped count last), joined with a space, abbreviated to
 1,000 characters; null when there are none. Status rules are unchanged
 (Skipped was never counted as degraded).
 
@@ -155,7 +155,7 @@ Exposed as `HumanitixSyncAdminController.getReadiness()` (not cacheable).
 | Key | Label | ok | not ok |
 | --- | --- | --- | --- |
 | `apiKey` | API key saved | `An API key is saved.` | error: `MISSING_KEY`; unknown: `The key could not be checked from this page. Use Test Connection on the Connection tab.` |
-| `connection` | Connection to Humanitix | `Humanitix accepted the API key.` | skipped as unknown when the key is missing: `Add the API key first.`; 401/403: `authRejected`; 429/5xx: `Humanitix is busy or unavailable right now. Refresh in a minute.`; missing credential exception: `MISSING_KEY`; other exception or status: `Humanitix could not be reached (…). Use Test Connection on the Connection tab for details.` |
+| `connection` | Connection to Humanitix | `Humanitix accepted the API key.` | skipped as unknown when the key is missing: `Add the API key first.`; 401/403: `authRejected`; 429/408/5xx (warning): `Humanitix is busy or unavailable right now. Refresh in a minute.`; missing credential exception: `MISSING_KEY`; other status: `Humanitix returned HTTP <status>. Use Test Connection on the Connection tab for details.`; other exception: `Humanitix could not be reached (<message>). Use Test Connection on the Connection tab for details.` |
 | `marketingUser` | Marketing User | `<names> can create Campaigns.` | error: `<names> is not a Marketing User, so Campaigns cannot be created. Tick Marketing User on the user record in Setup, Users.` |
 | `permissionSet` | Permission set | `<names> has the Humanitix Integration Admin permission set.` | error: `<names> does not have the Humanitix Integration Admin permission set. Assign it in Setup, Permission Sets.` |
 | `schedule` | Schedule | `A sync schedule is set.` | warning: `No schedule is set, so syncs run only when you click Run Sync Now. Set one on the Schedule tab.` |
@@ -180,7 +180,7 @@ A `lightning-card` titled **Ready to sync**, placed above **Sync Runs** in
 `getReadiness`. Each item shows an icon (`utility:success`, `utility:error`,
 `utility:warning`, `utility:info` for unknown), the label, and the message.
 A one-line header summary: `Everything is ready.` when all items are ok, else
-`N item(s) need attention.` (warnings count). A load failure shows the error
+`1 item needs attention.` / `N items need attention.` (warnings and unknowns count). A load failure shows the error
 text from `errorMessage(error)` in place of the list.
 
 ### Dashboard runs table
