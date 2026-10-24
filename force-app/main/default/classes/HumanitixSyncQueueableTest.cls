@@ -337,4 +337,113 @@ private class HumanitixSyncQueueableTest {
 
         System.assert(mock.requestedEndpoints[0].contains('since='), mock.requestedEndpoints[0]);
     }
+
+    private class MissingKeyMock implements HttpCalloutMock {
+        public HTTPResponse respond(HTTPRequest req) {
+            throw new System.CalloutException('Field HumanitixAPI.ApiKey does not exist. Check spelling.');
+        }
+    }
+
+    @IsTest
+    static void missingApiKeyEndsTheRunWithoutRetrying() {
+        Test.setMock(HttpCalloutMock.class, new MissingKeyMock());
+        HumanitixSyncQueueable q = new HumanitixSyncQueueable(baseState(new List<String>{ 'Tags', 'Events', 'Orders' }));
+
+        Test.startTest();
+        HumanitixSyncQueueable.StepOutcome oc = q.runStep();
+        Test.stopTest();
+
+        System.assertEquals(HumanitixSyncQueueable.StepOutcome.DONE, oc, 'a missing key must not retry');
+        Humanitix_Sync_Log_Entry__c entry = [SELECT Status__c, Error_Message__c FROM Humanitix_Sync_Log_Entry__c];
+        System.assertEquals('Failed', entry.Status__c);
+        System.assert(entry.Error_Message__c.startsWith(HumanitixSyncMessages.MISSING_KEY), entry.Error_Message__c);
+        System.assert(entry.Error_Message__c.contains('does not exist'), 'raw detail kept: ' + entry.Error_Message__c);
+        Humanitix_Sync_Log__c log = [SELECT Status__c, Error_Summary__c FROM Humanitix_Sync_Log__c WHERE Id = :q.getState().logId];
+        System.assertEquals('Failed', log.Status__c);
+        System.assertEquals(HumanitixSyncMessages.MISSING_KEY, log.Error_Summary__c);
+    }
+
+    @IsTest
+    static void rejectedKeyEndsTheRun() {
+        Test.setMock(HttpCalloutMock.class, new HumanitixCalloutMock().enqueue(401, '{"message":"Unauthorized"}'));
+        HumanitixSyncQueueable q = new HumanitixSyncQueueable(baseState(new List<String>{ 'Events', 'Orders', 'Tickets' }));
+
+        Test.startTest();
+        HumanitixSyncQueueable.StepOutcome oc = q.runStep();
+        Test.stopTest();
+
+        System.assertEquals(HumanitixSyncQueueable.StepOutcome.DONE, oc, '401 ends the run instead of failing every event');
+        Humanitix_Sync_Log_Entry__c entry = [SELECT Status__c, Error_Message__c FROM Humanitix_Sync_Log_Entry__c];
+        System.assert(entry.Error_Message__c.startsWith(HumanitixSyncMessages.authRejected(401)), entry.Error_Message__c);
+        System.assert(entry.Error_Message__c.contains('Unauthorized'), entry.Error_Message__c);
+    }
+
+    @IsTest
+    static void vanishedEventIsSkippedArchivedAndRunStaysSuccess() {
+        Test.setMock(HttpCalloutMock.class, new HumanitixCalloutMock().enqueue(404, '{"message":"Event not found"}'));
+        HumanitixSyncQueueable q = new HumanitixSyncQueueable(baseState(new List<String>{ 'Orders', 'Tickets' }));
+
+        Test.startTest();
+        HumanitixSyncQueueable.StepOutcome oc = q.runStep();
+        // Tickets starts its own keyset; the archived event is no longer in it.
+        HumanitixSyncQueueable.StepOutcome next = q.runStep();
+        Test.stopTest();
+
+        System.assertEquals(HumanitixSyncQueueable.StepOutcome.PROCEED, oc);
+        System.assertEquals(HumanitixSyncQueueable.StepOutcome.DONE, next, 'the archived event is not iterated again by Tickets');
+        Humanitix_Sync_Log_Entry__c entry = [SELECT Status__c, Http_Status__c, Error_Message__c FROM Humanitix_Sync_Log_Entry__c];
+        System.assertEquals('Skipped', entry.Status__c);
+        System.assert(entry.Error_Message__c.startsWith(HumanitixSyncMessages.eventNotFound()), entry.Error_Message__c);
+        System.assert(entry.Error_Message__c.contains('HTTP 404'), entry.Error_Message__c);
+        System.assertEquals(true, [SELECT Is_Archived__c FROM Humanitix_Event__c WHERE Humanitix_Id__c = :HumanitixTestDataFactory.EVENT_ID].Is_Archived__c);
+        System.assertEquals(0, [SELECT COUNT() FROM Humanitix_Sync_State__c WHERE Last_Status__c = 'Failed'], 'a skipped event is not a cursor failure');
+        System.assertEquals('Success', [SELECT Status__c FROM Humanitix_Sync_Log__c WHERE Id = :q.getState().logId].Status__c);
+    }
+
+    @IsTest
+    static void notFoundOnEventsListIsAFailureNotASkip() {
+        Test.setMock(HttpCalloutMock.class, new HumanitixCalloutMock().enqueue(404, ''));
+        HumanitixSyncQueueable q = new HumanitixSyncQueueable(baseState(new List<String>{ 'Events' }));
+
+        Test.startTest();
+        q.runStep();
+        Test.stopTest();
+
+        Humanitix_Sync_Log_Entry__c entry = [SELECT Status__c, Error_Message__c FROM Humanitix_Sync_Log_Entry__c];
+        System.assertEquals('Failed', entry.Status__c);
+        System.assert(entry.Error_Message__c.startsWith(HumanitixSyncMessages.refused(404)), entry.Error_Message__c);
+    }
+
+    @IsTest
+    static void exhaustedBusyRetriesExplainThemselves() {
+        Test.setMock(HttpCalloutMock.class, new HumanitixCalloutMock().enqueue(503, 'Service Unavailable'));
+        HumanitixSyncState st = baseState(new List<String>{ 'Events' });
+        st.maxRetries = 1;
+        st.attempt = 1;
+        HumanitixSyncQueueable q = new HumanitixSyncQueueable(st);
+
+        Test.startTest();
+        q.runStep();
+        Test.stopTest();
+
+        String msg = [SELECT Error_Message__c FROM Humanitix_Sync_Log_Entry__c].Error_Message__c;
+        System.assertEquals(HumanitixSyncMessages.withDetail(HumanitixSyncMessages.busy(503, 2), 'HTTP 503: Service Unavailable'), msg);
+    }
+
+    @IsTest
+    static void exhaustedTimeoutsExplainThemselves() {
+        Test.setMock(HttpCalloutMock.class, new ThrowingMock());
+        HumanitixSyncState st = baseState(new List<String>{ 'Events' });
+        st.maxRetries = 1;
+        st.attempt = 1;
+        HumanitixSyncQueueable q = new HumanitixSyncQueueable(st);
+
+        Test.startTest();
+        q.runStep();
+        Test.stopTest();
+
+        String msg = [SELECT Error_Message__c FROM Humanitix_Sync_Log_Entry__c].Error_Message__c;
+        System.assertEquals(HumanitixSyncMessages.withDetail(HumanitixSyncMessages.unreachable(2), 'Read timed out'), msg);
+        System.assert(!msg.contains('HTTP null'), msg);
+    }
 }

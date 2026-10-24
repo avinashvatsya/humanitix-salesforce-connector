@@ -8,6 +8,9 @@
  * Fault isolation: a fatal/exhausted-retry response on one work item logs a Failed
  * entry and advances to the next work item — one bad event never aborts the run.
  * Incremental: `since` comes from the per-cursor watermark, promoted only on success.
+ *
+ * A missing or rejected API key ends the run on the first occurrence; an event
+ * whose orders or tickets return 404 is archived and skipped (later runs skip it).
  */
 public with sharing class HumanitixSyncQueueable implements Queueable, Database.AllowsCallouts {
     public enum StepOutcome { PROCEED, RETRY, DONE }
@@ -35,7 +38,7 @@ public with sharing class HumanitixSyncQueueable implements Queueable, Database.
         } catch (Exception e) {
             HumanitixSyncLogService.addEntry(
                 state.logId, phaseToResourceKey(safePhase()), state.currentEventId, 'Failed', 0, 0, state.page, null,
-                state.attempt, 'Unexpected: ' + e.getMessage()
+                state.attempt, HumanitixSyncMessages.withDetail(HumanitixSyncMessages.unexpected(), e.getMessage())
             );
             HumanitixSyncStateService.recordFailure(
                 cursorKey(), phaseToResourceKey(safePhase()), state.currentEventId, state.runId
@@ -68,10 +71,16 @@ public with sharing class HumanitixSyncQueueable implements Queueable, Database.
         Req req = buildRequest(phase);
         HttpResponse res = null;
         Integer status = null;
+        String calloutError = null;
         try {
             res = new HumanitixHttpClient(state.namedCredential).get(req.path);
             status = res.getStatusCode();
         } catch (System.CalloutException ce) {
+            calloutError = ce.getMessage();
+            if (HumanitixSyncMessages.isMissingCredential(calloutError)) {
+                // Every later call would fail the same way: end the run now, no retries.
+                return failRun(req.resourceKey, null, HumanitixSyncMessages.withDetail(HumanitixSyncMessages.MISSING_KEY, calloutError));
+            }
             // Timeout / DNS / connection reset: treat as a retryable no-status
             // outcome rather than letting it hit the fatal catch-all in execute().
             status = null;
@@ -81,9 +90,14 @@ public with sharing class HumanitixSyncQueueable implements Queueable, Database.
         if (oc == HumanitixRetryPolicy.Outcome.RETRY) {
             state.attempt++;
             if (state.attempt > state.maxRetries) {
+                String msg = status == null
+                    ? HumanitixSyncMessages.withDetail(HumanitixSyncMessages.unreachable(state.attempt), calloutError)
+                    : HumanitixSyncMessages.withDetail(
+                        HumanitixSyncMessages.busy(status, state.attempt), HumanitixSyncMessages.httpDetail(status, res.getBody())
+                    );
                 HumanitixSyncLogService.addEntry(
                     state.logId, req.resourceKey, state.currentEventId, 'Failed', 0, 0, state.page, status,
-                    state.attempt, 'Max retries exceeded (HTTP ' + status + ')'
+                    state.attempt, msg
                 );
                 HumanitixSyncStateService.recordFailure(cursorKey(), req.resourceKey, state.currentEventId, state.runId);
                 advanceWorkItem();
@@ -96,9 +110,24 @@ public with sharing class HumanitixSyncQueueable implements Queueable, Database.
         }
 
         if (oc == HumanitixRetryPolicy.Outcome.FATAL) {
+            String detail = HumanitixSyncMessages.httpDetail(status, res.getBody());
+            if (status == 401 || status == 403) {
+                return failRun(req.resourceKey, status, HumanitixSyncMessages.withDetail(HumanitixSyncMessages.authRejected(status), detail));
+            }
+            if (status == 404 && (phase == 'Orders' || phase == 'Tickets')) {
+                // The event was deleted in Humanitix: archive the staged row so the
+                // Orders/Tickets keyset skips it from now on. Not a cursor failure.
+                HumanitixSyncLogService.addEntry(
+                    state.logId, req.resourceKey, state.currentEventId, 'Skipped', 0, 0, state.page, status,
+                    state.attempt, HumanitixSyncMessages.withDetail(HumanitixSyncMessages.eventNotFound(), detail)
+                );
+                archiveEvent(state.currentEventId);
+                moveToNextEventOrPhase();
+                return state.isDone() ? finalizeAndDone() : StepOutcome.PROCEED;
+            }
             HumanitixSyncLogService.addEntry(
                 state.logId, req.resourceKey, state.currentEventId, 'Failed', 0, 0, state.page, status,
-                state.attempt, 'HTTP ' + status + ': ' + abbreviate(res == null ? '' : res.getBody())
+                state.attempt, HumanitixSyncMessages.withDetail(HumanitixSyncMessages.refused(status), detail)
             );
             HumanitixSyncStateService.recordFailure(cursorKey(), req.resourceKey, state.currentEventId, state.runId);
             advanceWorkItem();
@@ -231,6 +260,23 @@ public with sharing class HumanitixSyncQueueable implements Queueable, Database.
         }
     }
 
+    /** Logs a run-ending failure (missing or rejected key) and finalizes the run. */
+    private StepOutcome failRun(String resourceKey, Integer status, String message) {
+        HumanitixSyncLogService.addEntry(
+            state.logId, resourceKey, state.currentEventId, 'Failed', 0, 0, state.page, status, state.attempt, message
+        );
+        HumanitixSyncStateService.recordFailure(cursorKey(), resourceKey, state.currentEventId, state.runId);
+        return finalizeAndDone();
+    }
+
+    private static void archiveEvent(String humanitixId) {
+        List<Humanitix_Event__c> rows = [SELECT Id FROM Humanitix_Event__c WHERE Humanitix_Id__c = :humanitixId LIMIT 1];
+        if (!rows.isEmpty()) {
+            rows[0].Is_Archived__c = true;
+            update rows;
+        }
+    }
+
     // ---- helpers ----------------------------------------------------------
 
     /** The selected event ids in Selected mode; null means "every event". */
@@ -294,10 +340,6 @@ public with sharing class HumanitixSyncQueueable implements Queueable, Database.
         HumanitixSyncLogService.finalizeRun(state.logId);
         state.phaseIndex = state.phases.size(); // ensure isDone()
         return StepOutcome.DONE;
-    }
-
-    private static String abbreviate(String body) {
-        return String.isBlank(body) ? '' : body.abbreviate(500);
     }
 
     private void chain(StepOutcome outcome) {
