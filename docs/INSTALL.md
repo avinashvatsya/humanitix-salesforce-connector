@@ -6,10 +6,10 @@
   connector uses **Campaigns** and **Campaign Members**, so the org must have the
   Campaigns feature and the syncing user must be a **Marketing User** (see
   [CONFIGURATION.md](CONFIGURATION.md)).
-- A **Humanitix API key** — create one in Humanitix under *Account → Advanced →
+- A **Humanitix API key**: create one in Humanitix under *Account → Advanced →
   API Keys*.
 
-## Option A — Install the unlocked package (recommended for most orgs)
+## Option A: Install the unlocked package (recommended for most orgs)
 
 Version 1.3.0 (`04tOb000002TEEXIA4`):
 
@@ -34,7 +34,7 @@ sf package install --package 04tOb000002TEEXIA4 --wait 20 --security-type Admins
 > `Humanitix_*__c` to avoid collisions. If you already have components with those
 > exact API names, review before installing.
 
-## Option B — Deploy from source (scratch org / sandbox / dev org)
+## Option B: Deploy from source (scratch org / sandbox / dev org)
 
 ```bash
 git clone <this-repo> && cd humanitix-salesforce-connector
@@ -62,7 +62,7 @@ Humanitix Object Mapping and 159 Humanitix Field Mapping records under
 **Setup → Custom Metadata Types**. Re-running the seeder is safe: it only
 creates records that don't already exist, so your edited mappings are never
 overwritten. (To turn a default mapping off, untick **Is Active** rather than
-deleting it — deleted records are treated as missing and re-created on the
+deleting it; deleted records are treated as missing and re-created on the
 next upgrade.)
 
 Seeding is about *customization*, not function: while an org has no mapping
@@ -100,11 +100,38 @@ source deploy **adopts** the existing components into the package. One
 casualty to expect: replacing the `HumanitixAPI` external credential
 definition **deletes the manually-entered `ApiKey` authentication parameter**,
 and every callout then fails with
-`Field HumanitixAPI.ApiKey does not exist. Check spelling.` (the sync retries
-silently, so check Setup → Apex Jobs if runs seem stuck). After the install,
+`Field HumanitixAPI.ApiKey does not exist. Check spelling.` (from 1.3.1 the
+run stops on its first step with *No Humanitix API key is saved*, and the
+Dashboard checklist shows the same). After the install,
 re-enter the parameter (step 2 of Post-install setup) before running a sync.
 Normal package-to-package upgrades only touch the external credential if its
 definition changed in the new version, so the parameter usually survives those.
+
+## Troubleshooting the install
+
+Start with the **Ready to sync** checklist on the *Humanitix Setup* tab's
+**Dashboard**: it checks the API key, the connection, the Marketing User and
+permission set for the users who run the sync, and the schedule, and says what
+to do for any item that fails.
+
+If the install itself fails:
+
+- **The connector was already deployed from source.** Installing over a source
+  deploy normally adopts the existing components (see the section above, and
+  re-enter the API key afterwards). If the install stops with an error, it names
+  the component it could not install. A component that was changed in the org in
+  a way the package cannot apply, for example a field whose type was changed,
+  must be changed back to match the package, or removed, before you install
+  again.
+- **Installing an older version over a newer one.** A package cannot be
+  downgraded. Install the current version instead. Going back to an older
+  version means uninstalling first, which deletes the connector's objects and
+  their data.
+- **Right after deleting connector fields.** Salesforce keeps a deleted custom
+  field, and its API name, until it is erased, so a package field of the same
+  name cannot be created. In Setup, open **Object Manager**, the object,
+  **Fields & Relationships**, then **Deleted Fields**, and **Erase** the field.
+  Then install again.
 
 ## Uninstalling
 

@@ -162,8 +162,28 @@ when no record exists.
 - **Scheduled:** *Humanitix Setup* tab → **Schedule**, described below.
 - **From a Flow / Agentforce:** add the **Run Humanitix Sync** invocable action.
 
-Monitor runs on the **Humanitix Sync Logs** tab — each run has a header (status,
+Monitor runs on the **Humanitix Sync Logs** tab: each run has a header (status,
 totals) and per-resource/per-event entries with any error messages.
+
+### Ready to sync checklist and run reasons
+
+The **Dashboard** tab starts with a **Ready to sync** checklist: API key saved,
+connection to Humanitix, Marketing User, the Humanitix Integration Admin
+permission set (for you and for the users who own the scheduled jobs, since a
+scheduled run runs as the user who scheduled it), and a schedule. Every item
+that needs attention says what to do and where. **Refresh** checks again.
+
+The **Sync Runs** table has a **Reason** column with a plain-language summary of
+anything that went wrong in a run. Each log entry starts with the same sentence
+and keeps the raw response after **Details:** for support:
+
+| Message | What it means |
+| --- | --- |
+| No Humanitix API key is saved | The run stopped on its first call. Add the key on the Connection tab. |
+| Humanitix rejected the API key | HTTP 401 or 403. The run stopped. Check the key, and that the user running the sync has the permission set. |
+| This event no longer exists in Humanitix and was skipped | HTTP 404 on an event's orders or tickets. The event is marked archived in Salesforce and later runs skip it. This does not make the run Partial. |
+| Humanitix was busy or unavailable | HTTP 429 or 5xx after all retries. The next run tries again. |
+| Humanitix could not be reached | A timeout or network error after all retries. The next run tries again. |
 
 ### Scheduling from the Schedule tab
 
