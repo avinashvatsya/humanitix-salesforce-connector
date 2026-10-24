@@ -90,7 +90,7 @@ button (`login.salesforce.com`) and a `sf package install` command, so replace
 every occurrence:
 
 ```bash
-grep -rl 04tOb000002JelNIAS README.md docs/ | xargs sed -i '' 's/04tOb000002JelNIAS/<new 04t id>/g'
+grep -rl 04tOb000002TEEXIA4 README.md docs/ | xargs sed -i '' 's/04tOb000002TEEXIA4/<new 04t id>/g'
 ```
 
 ## Versioning
