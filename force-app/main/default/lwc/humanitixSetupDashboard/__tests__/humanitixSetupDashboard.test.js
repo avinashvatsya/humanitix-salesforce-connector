@@ -31,6 +31,11 @@ jest.mock(
   },
   { virtual: true }
 );
+jest.mock(
+  '@salesforce/apex/HumanitixSyncAdminController.getReadiness',
+  () => ({ default: jest.fn(() => Promise.resolve([])) }),
+  { virtual: true }
+);
 
 function flush() {
   return Promise.resolve();
@@ -99,5 +104,19 @@ describe('c-humanitix-setup-dashboard', () => {
 
     const button = runButton(element);
     expect(button).toBeNull();
+  });
+
+  it('shows the run reason column', async () => {
+    const element = createElement('c-humanitix-setup-dashboard', { is: HumanitixSetupDashboard });
+    document.body.appendChild(element);
+
+    isSyncEnabled.emit(true);
+    getRecentRuns.emit([{ Id: 'a01', Name: 'RUN-1', Status__c: 'Failed', Error_Summary__c: 'No Humanitix API key is saved.' }]);
+    await flush();
+
+    const table = element.shadowRoot.querySelector('lightning-datatable');
+    const reason = table.columns.find((c) => c.fieldName === 'Error_Summary__c');
+    expect(reason.label).toBe('Reason');
+    expect(element.shadowRoot.querySelector('c-humanitix-readiness-checklist')).not.toBeNull();
   });
 });
