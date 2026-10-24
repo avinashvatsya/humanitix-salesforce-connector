@@ -237,10 +237,9 @@ public with sharing class HumanitixSyncSettingsController {
         return out;
     }
 
-    /** The platform says "does not exist" when the external credential has no ApiKey parameter yet. */
     @TestVisible
     private static String calloutFailureMessage(String platformMessage) {
-        if (platformMessage != null && platformMessage.contains('does not exist')) {
+        if (HumanitixSyncMessages.isMissingCredential(platformMessage)) {
             return 'Add your Humanitix API key on the Connection tab, then try again.';
         }
         return 'Humanitix could not be reached: ' + platformMessage;

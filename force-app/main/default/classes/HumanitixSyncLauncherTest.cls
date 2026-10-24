@@ -165,4 +165,49 @@ private class HumanitixSyncLauncherTest {
         Test.stopTest();
         System.assertEquals(0, [SELECT COUNT() FROM Humanitix_Sync_Log__c], 'No run log may be created');
     }
+
+    private static void keyIsMissing() {
+        HumanitixCredentialService.KeyStatus st = new HumanitixCredentialService.KeyStatus();
+        st.statusKnown = true;
+        st.keySaved = false;
+        HumanitixCredentialService.testStatus = st;
+    }
+
+    @IsTest
+    static void missingKeyRefusesToStart() {
+        keyIsMissing();
+        Test.startTest();
+        try {
+            HumanitixSyncLauncher.start('Manual');
+            System.assert(false, 'expected LaunchException');
+        } catch (HumanitixSyncLauncher.LaunchException e) {
+            System.assertEquals(HumanitixSyncMessages.MISSING_KEY, e.getMessage());
+        }
+        Test.stopTest();
+        System.assertEquals(null, HumanitixSyncLauncher.lastState, 'nothing is enqueued');
+    }
+
+    @IsTest
+    static void scheduledRunWithMissingKeyLeavesAFailedRun() {
+        keyIsMissing();
+        Test.startTest();
+        new HumanitixSyncScheduler().execute(null);
+        Test.stopTest();
+        Humanitix_Sync_Log__c log = [SELECT Status__c, Trigger_Source__c, Error_Summary__c FROM Humanitix_Sync_Log__c];
+        System.assertEquals('Failed', log.Status__c);
+        System.assertEquals('Scheduled', log.Trigger_Source__c);
+        System.assertEquals(HumanitixSyncMessages.MISSING_KEY, log.Error_Summary__c);
+    }
+
+    @IsTest
+    static void unknownKeyStatusStillStarts() {
+        HumanitixCredentialService.KeyStatus st = new HumanitixCredentialService.KeyStatus();
+        st.statusKnown = false;
+        st.keySaved = false;
+        HumanitixCredentialService.testStatus = st;
+        Test.startTest();
+        Id logId = HumanitixSyncLauncher.start('Manual');
+        Test.stopTest();
+        System.assertNotEquals(null, logId);
+    }
 }

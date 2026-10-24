@@ -51,7 +51,9 @@ public with sharing class HumanitixConnectionController {
             // Typically a missing ApiKey parameter on the principal.
             result.statusCode = 0;
             result.ok = false;
-            result.message = 'The connection attempt failed: ' + e.getMessage();
+            result.message = HumanitixSyncMessages.isMissingCredential(e.getMessage())
+                ? HumanitixSyncMessages.MISSING_KEY
+                : 'The connection attempt failed: ' + e.getMessage();
         }
         return result;
     }

@@ -65,4 +65,20 @@ private class HumanitixConnectionControllerTest {
         System.assertEquals(true, status.keySaved);
         System.assertEquals(true, status.statusKnown);
     }
+
+    private class MissingKeyMock implements HttpCalloutMock {
+        public HTTPResponse respond(HTTPRequest req) {
+            throw new System.CalloutException('Field HumanitixAPI.ApiKey does not exist. Check spelling.');
+        }
+    }
+
+    @IsTest
+    static void testConnectionExplainsMissingKey() {
+        Test.setMock(HttpCalloutMock.class, new MissingKeyMock());
+        Test.startTest();
+        HumanitixConnectionController.TestResult result = HumanitixConnectionController.testConnection();
+        Test.stopTest();
+        System.assertEquals(false, result.ok);
+        System.assertEquals(HumanitixSyncMessages.MISSING_KEY, result.message);
+    }
 }
